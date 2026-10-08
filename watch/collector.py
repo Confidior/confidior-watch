@@ -99,12 +99,23 @@ RECORD_FIELDS = (
     "frontdoor_mode",
     "frontdoor_platform",
     "serving_leaf_sha256",
+    "tls_spki_fingerprint",
     "receipt_count",
     "mesh_ca",
     "operator_key_status",
     "operator_keyset_sha256",
     "schema_version",
     "hpke_key_present",
+    "snp_tcb",
+    "snp_report_data",
+    "report_data",
+    "nonce",
+    "crypto_material_hash",
+    "device_evidence_hash",
+    "tls_spki_fingerprint",
+    "hpke_public_key",
+    "collateral_count",
+    "vcek_present",
     "cert_spki_der_bytes",
 )
 
@@ -184,6 +195,20 @@ class Observation:
     operator_keyset_sha256: str = ""
     schema_version: str = ""
     hpke_key_present: str = ""
+    # SEV-SNP identity material. snp_tcb is what CVEs map against on the AMD
+    # side, the same way tee_tcb_svn does on Intel.
+    snp_tcb: str = ""
+    snp_report_data: str = ""
+    report_data: str = ""
+    nonce: str = ""
+    # The endorsed hashes and the bound key material. Recording them makes the
+    # quote-to-key chain checkable after the fact instead of taken on faith.
+    crypto_material_hash: str = ""
+    device_evidence_hash: str = ""
+    tls_spki_fingerprint: str = ""
+    hpke_public_key: str = ""
+    collateral_count: str = ""
+    vcek_present: str = ""
     cert_spki_der_bytes: str = ""
     note: str = ""
 

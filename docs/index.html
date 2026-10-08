@@ -124,16 +124,16 @@ footer .container{display:flex;justify-content:space-between;gap:16px;flex-wrap:
 <h1>Published attestation evidence, over time.</h1>
 <p class="lede">A scheduled crawl that records what vendors publish about their own attestation evidence, so that point-in-time observations become a time series.</p>
 <p class="note">This page observes; it does not grade. No verdict, score or ranking appears here and none is implied. Observations only, gaps visible, not a service, no uptime commitment. Every row carries the SHA-256 of the raw response so you can re-fetch the source and compare.</p>
-<p class="note">Generated <span class="mono">2026-10-08T21:42:36+00:00</span> &middot; 4 observations across 4 sources &middot; 1 run recorded.</p>
+<p class="note">Generated <span class="mono">2026-10-08T21:47:13+00:00</span> &middot; 5 observations across 5 sources &middot; 1 run recorded.</p>
 <p class="note">Each run verifies, not merely fetches: the quote signature against the vendor's root of trust, the TCB security version, whether the response was bound to a challenge this run generated, and what key exchange the endpoint negotiates. A check that could not run is shown as <em>not attempted</em> rather than as a failure, because those are different facts.</p>
 <details class="legend"><summary>What each check means</summary><table><tr><th>check</th><th>what it means</th></tr><tr><td class='m'>quote signature</td><td>the quote verifies against the vendor's root of trust: Intel's PCK certificate chain for TDX, the AWS Nitro root for Nitro</td></tr><tr><td class='m'>TCB SVN</td><td>the security version number of the platform, one byte per component. It moves on microcode and module updates and is the field CVEs map against</td></tr><tr><td class='m'>freshness</td><td>the response carried a challenge this run generated, so it was produced after we asked rather than replayed</td></tr><tr><td class='m'>key exchange</td><td>what TLS group the endpoint negotiates when offered a post-quantum hybrid</td></tr></table></details>
 <p class="kicker" style="margin-top:40px"><span class="num">01</span> confidentialai</p>
-<p class="headline first">first observed <span class="stamp">2026-10-08T21:42:26</span> &mdash; one observation, so there is nothing to compare against yet</p>
+<p class="headline first">first observed <span class="stamp">2026-10-08T21:46:57</span> &mdash; one observation, so there is nothing to compare against yet</p>
 <div class="facts"><span class="fact none">quote signature <b>not attempted</b></span><span class="fact none">tcb <b></b></span><span class="fact good">freshness <b>bound</b></span><span class="fact good">key exchange <b>X25519MLKEM768</b></span></div>
 <div class="card">
 <div class="card-head"><h2>confidentialai</h2><span class="chip chip-green">observed</span></div>
 <table><tr><th>observed</th><th>http</th><th>identity</th><th>response sha256</th></tr>
-<tr><td class="m">2026-10-08T21:42:26</td><td class="ok">200</td><td class="m">e0e5833d3aef03f117275df2c95a8d638ba248291f6f28e37c9e89b35b931ed5</td><td><code class="hash">e746beb76f3d6e20a7d4b078215eec2d1067e8da1d32d246ec9be321218c0df4</code><br><a class="recheck" href="https://api.confidential.ai/attestation">endpoint &rarr;</a><br><span class="recheck-note">not re-fetchable: this response was bound to a single-use challenge, so the same URL now returns 409</span></td></tr>
+<tr><td class="m">2026-10-08T21:46:57</td><td class="ok">200</td><td class="m">e0e5833d3aef03f117275df2c95a8d638ba248291f6f28e37c9e89b35b931ed5</td><td><code class="hash">d3d6fb9b4a493ff6b0f1b00545186c6afc3d984354a2d7646af7e96d80547640</code><br><a class="recheck" href="https://api.confidential.ai/attestation">endpoint &rarr;</a><br><span class="recheck-note">not re-fetchable: this response was bound to a single-use challenge, so the same URL now returns 409</span></td></tr>
 </table>
 <p class="empty">To check a row: open <em>re-fetch</em>, save the response, and compare its SHA-256 with the hash above.</p>
 <h3>Gates <span class="note">7 scored separately</span></h3>
@@ -167,12 +167,12 @@ footer .container{display:flex;justify-content:space-between;gap:16px;flex-wrap:
 <p class="empty">Source: <span class="mono">https://api.confidential.ai/attestation</span></p>
 </div>
 <p class="kicker" style="margin-top:40px"><span class="num">02</span> phala</p>
-<p class="headline first">first observed <span class="stamp">2026-10-08T21:42:26</span> &mdash; one observation, so there is nothing to compare against yet</p>
+<p class="headline first">first observed <span class="stamp">2026-10-08T21:46:57</span> &mdash; one observation, so there is nothing to compare against yet</p>
 <div class="facts"><span class="fact good">quote signature <b>verified</b></span><span class="fact good">tcb <b>0b01050000000000</b></span><span class="fact bad">freshness <b>not bound</b></span><span class="fact good">key exchange <b>X25519MLKEM768</b></span></div>
 <div class="card">
 <div class="card-head"><h2>phala</h2><span class="chip chip-green">observed</span></div>
 <table><tr><th>observed</th><th>http</th><th>identity</th><th>response sha256</th></tr>
-<tr><td class="m">2026-10-08T21:42:26</td><td class="ok">200</td><td class="m">0637b3d506c80c0328c84697c290f5fb7eef811c8d022124e04ee9b0f5f99567</td><td><code class="hash">fb2912ae1336b262e781bc08d65e442b0de60695403955819142cc0ac3494bb5</code><br><a class="recheck" href="https://inference.phala.com/v1/aci/attestation">endpoint &rarr;</a><br><span class="recheck-note">not re-fetchable: this response was bound to a single-use challenge, so the same URL now returns 409</span></td></tr>
+<tr><td class="m">2026-10-08T21:46:57</td><td class="ok">200</td><td class="m">0637b3d506c80c0328c84697c290f5fb7eef811c8d022124e04ee9b0f5f99567</td><td><code class="hash">032feec5ae43b12fff11a03403269b40fee41a58ffe0d803fe98fdb76e4e9cb5</code><br><a class="recheck" href="https://inference.phala.com/v1/aci/attestation">endpoint &rarr;</a><br><span class="recheck-note">not re-fetchable: this response was bound to a single-use challenge, so the same URL now returns 409</span></td></tr>
 </table>
 <p class="empty">To check a row: open <em>re-fetch</em>, save the response, and compare its SHA-256 with the hash above.</p>
 <h3>Gates <span class="note">7 scored separately</span></h3>
@@ -206,12 +206,12 @@ footer .container{display:flex;justify-content:space-between;gap:16px;flex-wrap:
 <p class="empty">Source: <span class="mono">https://inference.phala.com/v1/aci/attestation</span></p>
 </div>
 <p class="kicker" style="margin-top:40px"><span class="num">03</span> ppq</p>
-<p class="headline first">first observed <span class="stamp">2026-10-08T21:42:26</span> &mdash; one observation, so there is nothing to compare against yet</p>
+<p class="headline first">first observed <span class="stamp">2026-10-08T21:46:57</span> &mdash; one observation, so there is nothing to compare against yet</p>
 <div class="facts"><span class="fact good">quote signature <b>verified</b></span><span class="fact none">tcb <b></b></span><span class="fact none">freshness <b>not attempted</b></span><span class="fact good">key exchange <b>X25519MLKEM768</b></span></div>
 <div class="card">
 <div class="card-head"><h2>ppq</h2><span class="chip chip-green">observed</span></div>
 <table><tr><th>observed</th><th>http</th><th>identity</th><th>response sha256</th></tr>
-<tr><td class="m">2026-10-08T21:42:26</td><td class="ok">200</td><td class="m">6c9e3ccd496c7d515c4f08786688b1c0c30c3d0b1bbfee7b5ab184d8faa375ad</td><td><code class="hash">ed7732d9fd3ab92a262aa776cee2a0af37d24a28b1cf0c9eddb317f632c11290</code><br><a class="recheck" href="https://api.ppq.ai/attestation">re-fetch &rarr;</a></td></tr>
+<tr><td class="m">2026-10-08T21:46:57</td><td class="ok">200</td><td class="m">02ef7b432df8d9ecf0f1554d5e633295c952abe8acc0c190c3c1607cc81b14d8</td><td><code class="hash">4262c7c812b3d42711c8cf81767547f688967151491e3f0ad4877c9b97a7c229</code><br><a class="recheck" href="https://api.ppq.ai/attestation">re-fetch &rarr;</a></td></tr>
 </table>
 <p class="empty">To check a row: open <em>re-fetch</em>, save the response, and compare its SHA-256 with the hash above.</p>
 <h3>Gates <span class="note">7 scored separately</span></h3>
@@ -236,12 +236,12 @@ footer .container{display:flex;justify-content:space-between;gap:16px;flex-wrap:
 <p class="empty">Source: <span class="mono">https://api.ppq.ai/attestation</span></p>
 </div>
 <p class="kicker" style="margin-top:40px"><span class="num">04</span> redpill</p>
-<p class="headline first">first observed <span class="stamp">2026-10-08T21:42:26</span> &mdash; one observation, so there is nothing to compare against yet</p>
+<p class="headline first">first observed <span class="stamp">2026-10-08T21:46:57</span> &mdash; one observation, so there is nothing to compare against yet</p>
 <div class="facts"><span class="fact good">quote signature <b>verified</b></span><span class="fact good">tcb <b>0b01050000000000</b></span><span class="fact good">freshness <b>bound</b></span><span class="fact good">key exchange <b>X25519MLKEM768</b></span></div>
 <div class="card">
 <div class="card-head"><h2>redpill</h2><span class="chip chip-green">observed</span></div>
 <table><tr><th>observed</th><th>http</th><th>identity</th><th>response sha256</th></tr>
-<tr><td class="m">2026-10-08T21:42:26</td><td class="ok">200</td><td class="m">0637b3d506c80c0328c84697c290f5fb7eef811c8d022124e04ee9b0f5f99567</td><td><code class="hash">1dafa4d3c11b5158f9d88f4b01242313d8859a7b340f956a739b09a2a17fb2db</code><br><a class="recheck" href="https://api.redpill.ai/v1/attestation/report">endpoint &rarr;</a><br><span class="recheck-note">not re-fetchable: this response was bound to a single-use challenge, so the same URL now returns 409</span></td></tr>
+<tr><td class="m">2026-10-08T21:46:57</td><td class="ok">200</td><td class="m">0637b3d506c80c0328c84697c290f5fb7eef811c8d022124e04ee9b0f5f99567</td><td><code class="hash">91d2a3832877a7b5e0069f588637d6172012df07e86860dd562287c67cc0b619</code><br><a class="recheck" href="https://api.redpill.ai/v1/attestation/report">endpoint &rarr;</a><br><span class="recheck-note">not re-fetchable: this response was bound to a single-use challenge, so the same URL now returns 409</span></td></tr>
 </table>
 <p class="empty">To check a row: open <em>re-fetch</em>, save the response, and compare its SHA-256 with the hash above.</p>
 <h3>Gates <span class="note">7 scored separately</span></h3>
@@ -275,7 +275,37 @@ footer .container{display:flex;justify-content:space-between;gap:16px;flex-wrap:
 <p class="empty">No change recorded.</p>
 <p class="empty">Source: <span class="mono">https://api.redpill.ai/v1/attestation/report</span></p>
 </div>
-<p class="kicker" style="margin-top:56px"><span class="num">05</span> not readable anonymously</p>
+<p class="kicker" style="margin-top:40px"><span class="num">05</span> tinfoil</p>
+<p class="headline first">first observed <span class="stamp">2026-10-08T21:46:57</span> &mdash; one observation, so there is nothing to compare against yet</p>
+<div class="facts"><span class="fact none">quote signature <b>not attempted</b></span><span class="fact good">tcb <b>10.0.23.84</b></span><span class="fact good">freshness <b>bound</b></span><span class="fact good">key exchange <b>X25519MLKEM768</b></span></div>
+<div class="card">
+<div class="card-head"><h2>tinfoil</h2><span class="chip chip-green">observed</span></div>
+<table><tr><th>observed</th><th>http</th><th>identity</th><th>response sha256</th></tr>
+<tr><td class="m">2026-10-08T21:46:57</td><td class="ok">200</td><td class="m">b3be62c7199d8e4d24f130e5651bdc8a62a2532f72c7e87c986bec54bf5f90bab703ad4dbfc5e45bfd385f8972dfc66c00000000000000000000000000000000</td><td><code class="hash">26ceb1a156df22b4c9058d41870f1dc2337e8910ee2f3c0a1c84d4d1a2ab7ced</code><br><a class="recheck" href="https://inference.tinfoil.sh/.well-known/tinfoil-attestation">endpoint &rarr;</a><br><span class="recheck-note">not re-fetchable: this response was bound to a single-use challenge, so the same URL now returns 409</span></td></tr>
+</table>
+<p class="empty">To check a row: open <em>re-fetch</em>, save the response, and compare its SHA-256 with the hash above.</p>
+<h3>Gates <span class="note">7 scored separately</span></h3>
+<p class="gatebar"><span class="g g-good">2 good</span> <span class="g g-unverifiable">5 unverifiable</span></p>
+<table><tr><th>gate</th><th>status</th><th>evidence</th></tr>
+<tr><td class="m">hardware</td><td><span class="g g-unverifiable">unverifiable</span></td><td class="m">unknown</td></tr>
+<tr><td class="m">channel binding</td><td><span class="g g-good">good</span></td><td class="m">verified</td></tr>
+<tr><td class="m">freshness</td><td><span class="g g-good">good</span></td><td class="m">verified</td></tr>
+<tr><td class="m">TCB policy</td><td><span class="g g-unverifiable">unverifiable</span></td><td class="m">unknown</td></tr>
+<tr><td class="m">workload identity</td><td><span class="g g-unverifiable">unverifiable</span></td><td class="m">unknown</td></tr>
+<tr><td class="m">source provenance</td><td><span class="g g-unverifiable">unverifiable</span></td><td class="m">unknown</td></tr>
+<tr><td class="m">GPU evidence consistency</td><td><span class="g g-unverifiable">unverifiable</span></td><td class="m">unknown</td></tr>
+</table>
+<h3>Measured surface <span class="note">3 of 28 fields published</span></h3>
+<table><tr><th>field</th><th>value</th></tr>
+<tr><td class="m">platform</td><td class="m">amd-sev-snp</td></tr>
+<tr><td class="m">TLS bindings</td><td class="m">2</td></tr>
+<tr><td class="m">GPU evidence attached</td><td class="m">none published (the document&#x27;s device_evidence set is empty)</td></tr>
+</table>
+<h3>Changes</h3>
+<p class="empty">No change recorded.</p>
+<p class="empty">Source: <span class="mono">https://inference.tinfoil.sh/.well-known/tinfoil-attestation</span></p>
+</div>
+<p class="kicker" style="margin-top:56px"><span class="num">06</span> not readable anonymously</p>
 <p class="lede">Eight of the twelve confidential-inference endpoints we probed do not serve attestation evidence to an anonymous reader. Four do. This is a statement about publication posture, checked on <span class="mono">2026-10-09</span>, not a statement about whether these providers verify anything internally.</p>
 <div class="card"><table><tr><th>provider</th><th>endpoint</th><th>response</th><th>note</th></tr>
 <tr><td class="m">tinfoil</td><td class="m">api.tinfoil.sh/v1/attestation/report</td><td class="bad">426</td><td>rejects unencrypted bodies, requires an Encrypted-HTTP-Body-Protocol body</td></tr>

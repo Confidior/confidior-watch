@@ -370,7 +370,7 @@ def c8s_url() -> tuple[str, str]:
 
 
 def default_sources() -> list[Source]:
-    from watch.checks import check_c8s, check_dstack, check_nitro
+    from watch.checks import check_c8s, check_dstack, check_nitro, check_tinfoil
 
     return [
         Source(
@@ -398,6 +398,19 @@ def default_sources() -> list[Source]:
             host="api.ppq.ai",
         ),
         Source(
+            vendor="tinfoil",
+            url=tinfoil_url()[0],
+            parse=parse_tinfoil,
+            platform="amd-sev-snp",
+            check=check_tinfoil,
+            host="inference.tinfoil.sh",
+            note=(
+                "AMD SEV-SNP. The bare endpoint returns a small v2 document; a "
+                "64-hex nonce switches it to the v3 evidence set. Not to be "
+                "confused with /v1/attestation, which needs an API key."
+            ),
+        ),
+        Source(
             vendor="confidentialai",
             url=c8s_url()[0],
             parse=parse_c8s,
@@ -406,3 +419,191 @@ def default_sources() -> list[Source]:
             host="api.confidential.ai",
         ),
     ]
+
+
+# --------------------------------------------------------------------------
+# Tinfoil (AMD SEV-SNP, self-describing predicate document)
+#
+# Tinfoil publishes at /.well-known/tinfoil-attestation on the *inference* host
+# (tinfoil.sh itself returns 404). The response is a small JSON envelope whose
+# `body` is gzipped base64. The bare document carries predicate sev-snp-guest/v2
+# and, once a 32-byte hex nonce is supplied, switches to predicate
+# attestation/v3 and returns the full evidence set.
+#
+# Reverse-engineered by experiment on 2026-10-09, not from documentation. Two
+# things worth recording because they are easy to get wrong:
+#
+# 1. The v3 report_data does NOT simply hold a hash of the TLS certificate.
+#    It is sha256("https://tinfoil.sh/report-data/v1" || nonce || crypto_material
+#    _hash || device_evidence_hash), per the verifier source. Those hashes are
+#    carried in cpu_evidence.endorsed, so the binding chain is quote -> endorsed
+#    hashes -> crypto_material -> the TLS key. Verified byte-exact.
+# 2. Their README describes the TLS binding as a certificate hash. Measured, it
+#    is the SPKI hash. Small divergence, worth not repeating.
+#
+# No attestation is *published* on the release assets: the hardware-measurements
+# .json named in an earlier draft of the internal strategy note has never existed (404).
+
+TINFOIL_ATTESTATION_URL = (
+    "https://inference.tinfoil.sh/.well-known/tinfoil-attestation"
+)
+TINFOIL_REPORT_DATA_ALG = "https://tinfoil.sh/report-data/v1"
+
+
+def tinfoil_url() -> tuple[str, str]:
+    """(url, nonce) for Tinfoil. Requires a 64-hex challenge; a short one 400s,
+    and the bare endpoint answers with a smaller document that carries no
+    evidence set."""
+    nonce = fresh_nonce()
+    return f"{TINFOIL_ATTESTATION_URL}?nonce={nonce}", nonce
+
+
+def _gunzip_b64(value: str) -> bytes:
+    """Decode the base64+gzip envelope Tinfoil uses for evidence bodies."""
+    import base64 as _b64
+    import gzip as _gzip
+    import io as _io
+
+    raw = _b64.b64decode(value)
+    if raw[:2] == b"\x1f\x8b":
+        return _gzip.GzipFile(fileobj=_io.BytesIO(raw)).read()
+    return raw
+
+
+def parse_tinfoil(payload: Any) -> list[dict[str, Any]]:
+    """Parse a Tinfoil attestation document.
+
+    Handles both predicates: the bare v2 document (a raw SNP report) and the
+    nonce-bound v3 document (challenge, cpu evidence, crypto material, device
+    evidence). The v2 path keeps only what a bare report can say, rather than
+    inventing fields the document does not carry.
+    """
+    if not isinstance(payload, dict):
+        return [{"note": "unexpected payload type"}]
+
+    fmt = str(payload.get("format") or "")
+    out: dict[str, Any] = {"workload": "inference", "platform": "amd-sev-snp"}
+
+    if fmt.endswith("attestation/v3"):
+        cpu = payload.get("cpu_evidence") or {}
+        endorsed = cpu.get("endorsed") or {}
+        challenge = payload.get("challenge") or {}
+        report_b64 = str(cpu.get("report_base64") or "")
+
+        measurement = ""
+        if report_b64:
+            import base64 as _b64
+
+            try:
+                raw = _b64.b64decode(report_b64)
+                # SNP report layout: measurement at 0x90, report_data at 0x50.
+                if len(raw) >= 192:
+                    measurement = raw[0x90:0xD0].hex()
+                    out["snp_report_data"] = raw[0x50:0x90].hex()
+                    out["snp_tcb"] = _snp_tcb_version(raw)
+            except Exception:  # noqa: BLE001
+                pass
+        out["measurement"] = measurement
+
+        # The nonce the service returned, and the report_data it committed to.
+        out["nonce"] = str(challenge.get("nonce") or "")
+        out["report_data"] = str(challenge.get("report_data") or "")
+
+        # Endorsement hashes bind the quote to the crypto material and device
+        # evidence sections. Recording them is what makes the binding chain
+        # checkable later instead of taken on faith.
+        out["crypto_material_hash"] = str(endorsed.get("crypto_material_hash") or "")
+        out["device_evidence_hash"] = str(endorsed.get("device_evidence_hash") or "")
+
+        # Crypto material: the TLS SPKI fingerprint and the HPKE public key.
+        cm_raw = payload.get("crypto_material")
+        if isinstance(cm_raw, str) and cm_raw:
+            try:
+                cm = json.loads(_gunzip_b64(cm_raw)) if not cm_raw.startswith("{") else json.loads(cm_raw)
+                for item in cm.get("items") or []:
+                    if item.get("id") == "tls":
+                        out["tls_spki_fingerprint"] = str(item.get("data") or "")
+                    elif item.get("id") == "hpke":
+                        out["hpke_public_key"] = str(item.get("data") or "")
+                out["tls_binding_count"] = str(len(cm.get("items") or []))
+            except Exception:  # noqa: BLE001
+                pass
+
+        # Device evidence. Empty is a fact about the declaration, not a defect
+        # on its own: this is compared against the declared GPU count.
+        de_raw = payload.get("device_evidence")
+        count = ""
+        if isinstance(de_raw, str) and de_raw:
+            try:
+                de = json.loads(_gunzip_b64(de_raw)) if not de_raw.startswith("{") else json.loads(de_raw)
+                items = de.get("items") or []
+                count = str(len(items))
+                out["gpu_evidence_reason"] = (
+                    "" if items else "the document's device_evidence set is empty"
+                )
+            except Exception:  # noqa: BLE001
+                pass
+        out["nvidia_evidence_count"] = count
+        out["gpu_count"] = ""  # v3 carries no declared vm_shape; left unset
+
+        # Collateral: a VCEK is shipped inline, which is what allows the report
+        # to be verified without reaching AMD's KDS.
+        col = payload.get("collateral")
+        if isinstance(col, list):
+            out["collateral_count"] = str(len(col))
+            for entry in col:
+                data = entry.get("data") or {}
+                if isinstance(data, dict) and data.get("vcek_der_base64"):
+                    out["vcek_present"] = "true"
+                    break
+
+        out["device_evidence_format"] = ""
+        return [out]
+
+    # Bare v2: a raw gzipped SNP report with no wrapper fields.
+    body = payload.get("body")
+    if not isinstance(body, str) or not body:
+        return [{"note": "no body in document"}]
+    try:
+        raw = _gunzip_b64(body)
+    except Exception as e:  # noqa: BLE001
+        return [{"note": f"body not decodable: {type(e).__name__}"}]
+    if len(raw) >= 192:
+        out["measurement"] = raw[0x90:0xD0].hex()
+        out["snp_report_data"] = raw[0x50:0x90].hex()
+        out["snp_tcb"] = _snp_tcb_version(raw)
+    out["note"] = "bare v2 report: no evidence set without a nonce"
+    return [out]
+
+
+def _snp_tcb_version(raw: bytes) -> str:
+    """The SNP reported TCB as dotted components.
+
+    Uses the engine's parser rather than hand-rolled offsets. An earlier version
+    of this function guessed the byte layout and returned 255.255.255.255 for a
+    report whose real TCB is 10.0.23.84: plausible-looking, entirely wrong, and
+    exactly the failure mode a continuity log must not have. Unpacking the
+    struct properly is the only safe way to read it.
+    """
+    try:
+        from sev_pytools.verify import AttestationReport
+
+        report = AttestationReport.unpack(raw)
+    except Exception:  # noqa: BLE001
+        return ""
+
+    # The engine's unpacker is happy to decode all-0xFF filler into
+    # 255.255.255.255, so the result is sanity-checked rather than trusted.
+    # A fabricated TCB is worse than none: it is the field CVEs map against.
+    if getattr(report, "version", None) not in (2, 3):
+        return ""
+    try:
+        tcb = report.current_tcb
+        parts = (tcb.bootloader, tcb.tee, tcb.snp, tcb.microcode)
+    except AttributeError:
+        return ""
+    if any(not isinstance(p, int) or p < 0 or p > 255 for p in parts):
+        return ""
+    if parts == (255, 255, 255, 255) or parts == (0, 0, 0, 0):
+        return ""
+    return ".".join(str(p) for p in parts)

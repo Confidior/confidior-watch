@@ -594,3 +594,95 @@ def gate_summary(gates: list[Gate]) -> dict[str, int]:
     for gate in gates:
         counts[gate.status.value] = counts.get(gate.status.value, 0) + 1
     return counts
+
+
+def check_tinfoil(payload: Any, sent_nonce: str = "") -> Checks:
+    """Tinfoil (AMD SEV-SNP), nonce-bound v3 predicate document.
+
+    Two things are checked beyond the shared fields, because this source
+    publishes material that makes them checkable:
+
+    - the challenge echo, read from the *document's* challenge block rather than
+      any copy the payload happens to repeat;
+    - the REPORT_DATA derivation, which is published in their verifier source as
+      sha256(algorithm || nonce || crypto_material_hash || device_evidence_hash).
+      Recomputing it turns "the document says it bound the key" into "the quote
+      provably commits to this key", which is the whole point of the binding.
+
+    The SNP signature is NOT verified here. Tinfoil ships a VCEK in collateral
+    and the engine can verify against it, but that path reaches AMD's KDS for
+    the certificate chain and is too slow and too fragile for a periodic crawl.
+    It is recorded as unverifiable rather than reported as good.
+    """
+    checks = Checks()
+    if not isinstance(payload, dict):
+        return checks
+
+    # The challenge block, not the top level: the Tinfoil document carries the
+    # nonce and report_data under `challenge`, and reading the top level found
+    # nothing and reported "no nonce exchanged" for a request that had one.
+    challenge = payload.get("challenge") or {}
+    returned = str(challenge.get("nonce") or "")
+    checks.freshness_bound, checks.freshness_note = freshness_from_nonce(
+        sent_nonce, returned
+    )
+
+    report_data = str(challenge.get("report_data") or "")
+
+    # The SNP TCB lives inside the report, not at the document's top level. It
+    # is read here (rather than taken from the parsed record) so that the
+    # engine's TCB-status path has it, since that path keys off this field.
+    report_b64 = str((payload.get("cpu_evidence") or {}).get("report_base64") or "")
+    if report_b64:
+        try:
+            import base64 as _b64
+
+            from sev_pytools.verify import AttestationReport
+
+            tcb = AttestationReport.unpack(_b64.b64decode(report_b64)).current_tcb
+            checks.tcb_version = f"{tcb.bootloader}.{tcb.tee}.{tcb.snp}.{tcb.microcode}"
+        except Exception:  # noqa: BLE001
+            checks.tcb_version = ""
+
+    if not (sent_nonce and report_data):
+        return checks
+
+    # Recompute REPORT_DATA from its documented derivation.
+    endorsed = (payload.get("cpu_evidence") or {}).get("endorsed") or {}
+    cm_hash = str(endorsed.get("crypto_material_hash") or payload.get("crypto_material_hash") or "")
+    de_hash = str(endorsed.get("device_evidence_hash") or payload.get("device_evidence_hash") or "")
+    if not (cm_hash and de_hash):
+        # The nonce echo alone is weak: the document repeating our challenge
+        # proves it was produced after we asked, not that the quote commits to
+        # any key material. Say that plainly instead of leaving the echo's note
+        # standing as though the binding had been established.
+        checks.freshness_bound = ""
+        checks.freshness_note = (
+            "endorsed hashes absent, so the quote-to-key binding was not "
+            "recomputed; only the challenge echo was observed"
+        )
+        return checks
+    try:
+        import hashlib
+
+        expected = hashlib.sha256(
+            b"https://tinfoil.sh/report-data/v1"
+            + bytes.fromhex(sent_nonce)
+            + bytes.fromhex(cm_hash)
+            + bytes.fromhex(de_hash)
+        ).hexdigest()
+    except ValueError:
+        return checks
+
+    if report_data.startswith(expected):
+        checks.freshness_bound = "true"
+        checks.freshness_note = (
+            "report_data recomputed from the published derivation and matched, "
+            "so the quote commits to the published key material"
+        )
+    else:
+        checks.freshness_bound = "false"
+        checks.freshness_note = (
+            "report_data does not match the published derivation for this nonce"
+        )
+    return checks

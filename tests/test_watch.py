@@ -190,7 +190,7 @@ def test_default_sources_is_capped_and_never_grows_silently():
     """Depth over breadth. Growing this list is a deliberate act with a cost."""
     vendors = {s.vendor for s in default_sources()}
     assert len(default_sources()) <= 8
-    assert vendors == {"redpill", "phala", "ppq", "confidentialai"}
+    assert vendors == {"redpill", "phala", "ppq", "tinfoil", "confidentialai"}
 
 
 # ---------------------------------------------------------------------------
