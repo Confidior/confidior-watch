@@ -47,10 +47,15 @@ VERIFIED = "2026-10-09"
 
 @dataclass(frozen=True)
 class Source:
-    """A public evidence source: a vendor, a fetch, and a parse.
+    """A public evidence source: a vendor, a fetch, a parse, and a checker.
 
     ``parse`` receives the decoded response body and returns one or more partial
     observation dicts. The caller fills in vendor/url/status/hash.
+
+    ``check`` receives the same payload plus the nonce this run generated (empty
+    for sources that are not request-bound) and returns verification results --
+    signature, TCB, freshness. It is optional: a source with no checker still
+    produces observations.
     """
 
     vendor: str
@@ -58,6 +63,8 @@ class Source:
     parse: Callable[[Any], list[dict[str, Any]]]
     platform: str = ""
     note: str = ""
+    check: Callable[..., Any] | None = None
+    host: str = ""
 
 
 # --------------------------------------------------------------------------
@@ -203,20 +210,6 @@ def parse_nsm_cose(payload: Any) -> list[dict[str, Any]]:
 # --------------------------------------------------------------------------
 
 
-def _nonce_url() -> str:
-    """Build a fresh request URL with a new nonce.
-
-    Called per run rather than stored, so each observation carries its own
-    freshness challenge. The nonce used is recorded in the observation, which is
-    what lets a reader confirm the response was bound to this run.
-    """
-    import base64
-    import os
-
-    nonce = base64.urlsafe_b64encode(os.urandom(32)).decode().rstrip("=")
-    return f"https://api.confidential.ai/attestation?nonce={nonce}"
-
-
 def parse_c8s(payload: Any) -> list[dict[str, Any]]:
     """Parse the c8s attestation response."""
     if not isinstance(payload, dict):
@@ -277,30 +270,55 @@ def parse_c8s(payload: Any) -> list[dict[str, Any]]:
 # --------------------------------------------------------------------------
 
 
+def make_nonce() -> str:
+    """A fresh challenge for a request-bound source."""
+    import base64
+    import os
+
+    return base64.urlsafe_b64encode(os.urandom(32)).decode().rstrip("=")
+
+
+def c8s_url() -> tuple[str, str]:
+    """(url, nonce) for a request-bound source. The nonce is returned so the
+    checker can confirm the response was bound to *this* run."""
+    nonce = make_nonce()
+    return f"https://api.confidential.ai/attestation?nonce={nonce}", nonce
+
+
 def default_sources() -> list[Source]:
+    from watch.checks import check_c8s, check_dstack, check_nitro
+
     return [
         Source(
             vendor="redpill",
             url="https://api.redpill.ai/v1/attestation/report",
             parse=parse_dstack,
             platform="intel-tdx",
+            check=check_dstack,
+            host="api.redpill.ai",
         ),
         Source(
             vendor="phala",
             url="https://inference.phala.com/v1/aci/attestation",
             parse=parse_dstack,
             platform="intel-tdx",
+            check=check_dstack,
+            host="inference.phala.com",
         ),
         Source(
             vendor="ppq",
             url="https://api.ppq.ai/attestation",
             parse=parse_nsm_cose,
             platform="aws-nitro",
+            check=check_nitro,
+            host="api.ppq.ai",
         ),
         Source(
             vendor="confidentialai",
-            url=_nonce_url(),
+            url=c8s_url()[0],
             parse=parse_c8s,
             platform="confidential-ai-c8s",
+            check=check_c8s,
+            host="api.confidential.ai",
         ),
     ]

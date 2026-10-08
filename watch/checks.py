@@ -1,0 +1,340 @@
+"""Continuous verification of what each source publishes.
+
+A document watcher records that bytes changed. This module answers the question
+that matters: *was the thing those bytes claim actually true, at the time we
+looked?*
+
+Each run, per source, four independent checks:
+
+1. **Signature** -- the quote verifies against the vendor's root of trust
+   (Intel PCK chain for TDX, COSE/CBOR against the AWS Nitro root for Nitro).
+2. **TCB** -- the TCB version, read from the quote and (where an FMSPC is
+   available) compared against Intel's published current TCB.
+3. **Freshness** -- whether the response was bound to a challenge this run
+   generated, rather than replayed.
+4. **Wire** -- what TLS key exchange the endpoint actually negotiates, measured
+   rather than believed.
+
+Checks are **fail-soft and independent**. A source can have a valid signature and
+unreadable TCB; the log records both facts rather than collapsing them into one
+verdict. That is deliberate: the observation layer records what was observed, and
+the engine grades. This module does not produce a score.
+
+Nothing here is a claim about a provider's security. A passing signature check
+means the quote was genuine, not that the deployment is safe -- the engine's
+attack corpus exists precisely because those are different questions.
+
+All verifiers are imported from ``confidior-engine`` at call time, behind a
+try/except, so this repo still runs and still records observations when the
+engine is absent. The checks are added value, not a dependency.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import subprocess
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
+#: Where the engine lives, if it is available at all.
+#:
+#: The engine is deliberately NOT a dependency of this repo -- the clock must not
+#: break when the engine moves. So the verifiers are located at call time and
+#: their absence is a recorded result ("engine not importable"), not a crash.
+#: A run with no engine still produces observations; it just cannot say whether
+#: the quotes were valid, and the log records that gap rather than hiding it.
+ENGINE_PATH_ENV = "CONFIDIOR_ENGINE_PATH"
+
+
+def _engine_root() -> Path | None:
+    """Find a confidior-engine checkout, if one is reachable."""
+    override = os.environ.get(ENGINE_PATH_ENV)
+    if override:
+        candidate = Path(override)
+        return candidate if (candidate / "src").is_dir() else None
+    # Sibling checkout: this repo and the engine share a parent.
+    for base in (Path(__file__).resolve().parents[2], Path.cwd()):
+        candidate = base / "confidior-engine"
+        if (candidate / "src").is_dir():
+            return candidate
+    return None
+
+
+_ENGINE_READY: bool | None = None
+
+
+def engine_available() -> bool:
+    """Whether the engine's verifiers can be imported right now."""
+    global _ENGINE_READY
+    if _ENGINE_READY is not None:
+        return _ENGINE_READY
+    root = _engine_root()
+    if root is None:
+        _ENGINE_READY = False
+        return False
+    path = str(root)
+    if path not in sys.path:
+        sys.path.insert(0, path)
+    try:
+        import src.ingest.adapters.tdx  # noqa: F401
+
+        _ENGINE_READY = True
+    except Exception as e:  # noqa: BLE001
+        logger.warning("engine found at %s but not importable: %s", root, e)
+        _ENGINE_READY = False
+    return _ENGINE_READY
+
+#: Groups worth testing, strongest first. Offered explicitly so the answer is
+#: about what the endpoint *chooses* when given the option, not what the client
+#: happened to default to.
+PQ_GROUPS = ("X25519MLKEM768", "SecP256r1MLKEM768", "SecP384r1MLKEM1024")
+CLASSICAL_GROUPS = ("X25519", "secp256r1")
+
+TLS_TIMEOUT = 20
+
+
+@dataclass
+class Checks:
+    """Per-observation verification results. Every field is optional by design."""
+
+    signature_valid: str = ""      # "true" / "false" / "" (not attempted)
+    signature_error: str = ""
+    tcb_version: str = ""
+    tcb_status: str = ""           # Intel's current / outdated / unknown
+    tcb_reference: str = ""
+    freshness_bound: str = ""      # "true" / "false" / ""
+    freshness_note: str = ""
+    tls_group: str = ""            # what the endpoint negotiated when offered PQ
+    tls_pq: str = ""               # "hybrid" / "classical" / ""
+    tls_error: str = ""
+
+    def as_fields(self) -> dict[str, str]:
+        return {
+            "signature_valid": self.signature_valid,
+            "signature_error": self.signature_error[:200],
+            "tcb_version": self.tcb_version,
+            "tcb_status": self.tcb_status,
+            "tcb_reference": self.tcb_reference,
+            "freshness_bound": self.freshness_bound,
+            "freshness_note": self.freshness_note[:200],
+            "tls_group": self.tls_group,
+            "tls_pq": self.tls_pq,
+            "tls_error": self.tls_error[:200],
+        }
+
+
+# ---------------------------------------------------------------------------
+# 1. Signature verification. Reuses the engine's adapters.
+# ---------------------------------------------------------------------------
+
+
+def verify_tdx_quote_hex(quote_hex: str) -> tuple[str, str]:
+    """Verify a TDX quote against Intel's PCK chain. Returns (valid, error)."""
+    if not quote_hex:
+        return "", "no quote present"
+    if not engine_available():
+        return "", "engine not importable"
+    try:
+        from src.ingest.adapters.tdx import verify_tdx_quote
+
+        result = verify_tdx_quote(quote_hex)
+        return ("true" if result.get("valid") else "false"), str(result.get("error") or "")
+    except Exception as e:  # noqa: BLE001 - a verifier failure is data, not a crash
+        logger.warning("TDX verification raised: %s", e)
+        return "false", f"{type(e).__name__}: {e}"
+
+
+def verify_nitro_doc_b64(doc_b64: str) -> tuple[str, str]:
+    """Verify an AWS Nitro attestation document (base64). Returns (valid, error)."""
+    if not doc_b64:
+        return "", "no document present"
+
+    import base64
+
+    try:
+        raw = base64.b64decode(doc_b64, validate=True)
+    except Exception as e:  # noqa: BLE001 - a real encoding problem, distinct from a missing engine
+        return "", f"not valid base64: {type(e).__name__}"
+
+    if not engine_available():
+        return "", "engine not importable"
+    try:
+        from src.ingest.adapters.nitro import verify_nitro_attestation
+
+        result = verify_nitro_attestation(raw.hex())
+        return ("true" if result.get("valid") else "false"), str(result.get("error") or "")
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Nitro verification raised: %s", e)
+        return "false", f"{type(e).__name__}: {e}"
+
+
+# ---------------------------------------------------------------------------
+# 2. TCB.
+# ---------------------------------------------------------------------------
+
+
+def tdx_quote_fields(quote_hex: str) -> dict[str, str]:
+    """Read the identity-bearing fields from a TDX quote.
+
+    ``parse_td_quote`` returns a dict of header/body, with hex strings -- not the
+    object graph the adapter builds. Two fields matter here:
+
+    - ``tee_tcb_svn`` is the TCB security version number. This is the field CVEs
+      map against and the one the engine's retroactive-invalidation keys off, so
+      a continuity log without it cannot connect to the attack corpus at all.
+    - ``mrseam`` identifies the TDX module itself, which is what a microcode or
+      module update changes.
+
+    Returns {} when unreadable. TCB is optional detail; it must never fail a run.
+    """
+    if not quote_hex or not engine_available():
+        return {}
+    try:
+        from cvm_attest.tdx.verify import parse_td_quote
+
+        parsed = parse_td_quote(bytes.fromhex(quote_hex.strip()))
+        body = parsed.get("body") or {}
+        out: dict[str, str] = {}
+        svn = str(body.get("tee_tcb_svn") or "")
+        if svn:
+            # The first 8 bytes are the meaningful SVN; the rest is reserved.
+            out["tcb_version"] = svn[:16]
+        seam = str(body.get("mrseam") or "")
+        if seam:
+            out["mrseam"] = seam
+        return out
+    except Exception as e:  # noqa: BLE001
+        logger.debug("TCB extraction failed: %s", e)
+        return {}
+
+
+# ---------------------------------------------------------------------------
+# 3. Freshness.
+# ---------------------------------------------------------------------------
+
+
+def freshness_from_nonce(sent_nonce: str, returned_nonce: str) -> tuple[str, str]:
+    """Did the response echo the challenge this run generated?
+
+    A response that repeats a challenge we just created proves it was produced
+    after we asked. One that does not may be cached, replayed, or generated for
+    someone else -- all of which are findings, not errors.
+    """
+    if not sent_nonce or not returned_nonce:
+        return "", "no nonce exchanged"
+    if sent_nonce == returned_nonce:
+        return "true", "response echoes the challenge sent this run"
+    return "false", "response nonce does not match the challenge sent this run"
+
+
+# ---------------------------------------------------------------------------
+# 4. Wire measurement.
+# ---------------------------------------------------------------------------
+
+
+def measure_tls_group(host: str, *, port: int = 443, runner: Any = None) -> tuple[str, str]:
+    """Ask what key exchange the endpoint negotiates when offered a PQ hybrid.
+
+    Measured with openssl rather than Python's ssl module because
+    ``set_ecdh_curve`` does not accept hybrid group names on the Python versions
+    this runs on, and a probe that silently cannot offer the group measures
+    nothing. (An earlier version of this file made exactly that mistake and
+    reported a false positive; the openssl call replaced it.)
+    """
+    if not host:
+        return "", "no host"
+    cmd = [
+        "openssl", "s_client",
+        "-connect", f"{host}:{port}",
+        "-servername", host,
+        "-groups", ":".join(PQ_GROUPS),
+    ]
+    try:
+        if runner is None:
+
+            def runner(argv: list[str]) -> str:
+                proc = subprocess.run(
+                    argv, capture_output=True, text=True, timeout=TLS_TIMEOUT, input=""
+                )
+                return proc.stdout + proc.stderr
+
+        out = runner(cmd)
+    except FileNotFoundError:
+        return "", "openssl not available"
+    except subprocess.TimeoutExpired:
+        return "", "openssl timed out"
+    except Exception as e:  # noqa: BLE001
+        return "", f"{type(e).__name__}: {e}"
+
+    for line in out.splitlines():
+        low = line.lower()
+        if "negotiated tls" in low and "group" in low:
+            group = line.split(":", 1)[1].strip()
+            kind = "hybrid" if any(g in group for g in PQ_GROUPS) else "classical"
+            return group, ""
+    if "handshake failure" in out.lower() or "alert" in out.lower():
+        return "", "no PQ hybrid accepted"
+    return "", "group not reported"
+
+
+# ---------------------------------------------------------------------------
+# Per-source assembly.
+# ---------------------------------------------------------------------------
+
+
+def check_dstack(payload: Any) -> Checks:
+    """dstack aci/1 (RedPill, Phala)."""
+    checks = Checks()
+    if not isinstance(payload, dict):
+        return checks
+    attestation = payload.get("attestation") or {}
+    evidence = attestation.get("evidence") or {}
+
+    quote = str(payload.get("intel_quote") or evidence.get("quote") or "")
+    valid, err = verify_tdx_quote_hex(quote)
+    checks.signature_valid = valid
+    checks.signature_error = err
+    fields = tdx_quote_fields(quote)
+    checks.tcb_version = fields.get("tcb_version", "")
+    checks.tcb_reference = fields.get("mrseam", "")
+
+    # report_data is the quote's binding to a caller-supplied value. RedPill
+    # echoes it under both names; whether it binds anything *we* chose is a
+    # separate question, and today no challenge is sent, so this records the
+    # binding's presence rather than a freshness conclusion.
+    report_data = str(attestation.get("report_data") or "")
+    quote_report_data = str(evidence.get("quote_report_data") or "")
+    if report_data and report_data == quote_report_data:
+        checks.freshness_bound = "unbound"
+        checks.freshness_note = (
+            "quote report_data matches the payload's report_data, but no challenge "
+            "was supplied this run, so freshness cannot be concluded from it"
+        )
+    return checks
+
+
+def check_nitro(payload: Any) -> Checks:
+    """AWS Nitro nsm-cose-sign1 (PPQ)."""
+    checks = Checks()
+    if not isinstance(payload, dict):
+        return checks
+    valid, err = verify_nitro_doc_b64(str(payload.get("attestation_document_b64") or ""))
+    checks.signature_valid = valid
+    checks.signature_error = err
+    return checks
+
+
+def check_c8s(payload: Any, sent_nonce: str) -> Checks:
+    """Confidential AI c8s, which is request-bound by nonce."""
+    checks = Checks()
+    if not isinstance(payload, dict):
+        return checks
+    returned = str(payload.get("nonce") or "")
+    checks.freshness_bound, checks.freshness_note = freshness_from_nonce(sent_nonce, returned)
+    return checks

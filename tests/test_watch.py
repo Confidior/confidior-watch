@@ -335,8 +335,10 @@ def test_parse_c8s_survives_malformed_shapes():
 
 
 def test_c8s_url_carries_a_fresh_nonce_each_time():
-    from watch.sources import _nonce_url
+    from watch.sources import c8s_url
 
-    a, b = _nonce_url(), _nonce_url()
-    assert a != b
+    a, an = c8s_url()
+    b, bn = c8s_url()
+    assert a != b and an != bn
     assert "nonce=" in a and a.count("nonce=") == 1
+    assert an in a

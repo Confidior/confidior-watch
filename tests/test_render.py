@@ -12,7 +12,8 @@ from watch.render import (  # noqa: E402
     find_changes,
     load,
     render,
-    unchanged_since,
+    stability,
+    strip_query,
 )
 
 
@@ -49,14 +50,37 @@ def test_empty_identity_never_reads_as_a_change():
     assert find_changes(rows) == []
 
 
-def test_unchanged_since_is_the_last_change():
-    assert unchanged_since(ROWS) == "2026-10-15T06:00:00+00:00"
+def test_stability_reports_the_last_change():
+    since, count = stability(ROWS)
+    assert since == "2026-10-15T06:00:00+00:00"
+    assert count == 3
 
 
-def test_unchanged_since_falls_back_to_first_observation():
+def test_stability_falls_back_to_first_observation():
     rows = [rec("v", "2026-10-01T06:00:00+00:00", measurement="aaa"),
             rec("v", "2026-10-08T06:00:00+00:00", measurement="aaa")]
-    assert unchanged_since(rows) == "2026-10-01T06:00:00+00:00"
+    since, count = stability(rows)
+    assert since == "2026-10-01T06:00:00+00:00"
+    assert count == 2
+
+
+def test_single_observation_is_not_reported_as_stable():
+    """One observation is not a stability claim. Day one is when people look."""
+    rows = [rec("v", "2026-10-01T06:00:00+00:00", measurement="aaa")]
+    since, count = stability(rows)
+    assert count == 1
+    html = _flat(render(rows, generated_at="t"))
+    assert "first observed" in html
+    assert "nothing to compare against yet" in html
+    assert "unchanged since" not in html
+
+
+def test_two_observations_licenses_the_unchanged_wording():
+    rows = [rec("v", "2026-10-01T06:00:00+00:00", measurement="aaa"),
+            rec("v", "2026-10-08T06:00:00+00:00", measurement="aaa")]
+    html = _flat(render(rows, generated_at="t"))
+    assert "unchanged since" in html
+    assert "2 observations" in html
 
 
 def test_heartbeat_records_are_not_vendors():
@@ -87,6 +111,23 @@ def test_page_states_no_uptime_commitment():
     assert "no uptime commitment" in html
 
 
+def test_page_uses_the_dotcom_design_tokens():
+    """Same brand as confidior.com, not a separate project."""
+    html = render(ROWS, generated_at="t")
+    for token in ["--bg:#0b0d14", "--bg-panel:#161822", "--accent:#7b8cff",
+                  "--green:#4dc729", "--red:#df3c30", "--container:1120px"]:
+        assert token in html, f"missing design token {token}"
+
+
+def test_body_text_uses_sans_and_only_machine_values_use_mono():
+    """DESIGN.md 1.4: mono means machine truth. Using it everywhere destroys the signal."""
+    html = render(ROWS, generated_at="t")
+    assert "font-family:var(--sans)" in html
+    # the body rule must not be monospace
+    body_rule = html.split("body{")[1].split("}")[0]
+    assert "var(--mono)" not in body_rule
+
+
 def test_empty_log_says_so_rather_than_looking_healthy():
     html = _flat(render([], generated_at="2026-10-15T00:00:00+00:00"))
     assert "No observations yet" in html
@@ -98,6 +139,13 @@ def test_unreadable_source_is_shown_not_hidden():
     html = _flat(render(rows, generated_at="t"))
     assert "426" in html
     assert "recorded, not hidden" in html
+
+
+def test_nonce_is_stripped_from_the_displayed_source():
+    """A per-run nonce is not part of the endpoint's identity."""
+    assert strip_query("https://api.confidential.ai/attestation?nonce=abc") == \
+        "https://api.confidential.ai/attestation"
+    assert strip_query("https://api.ppq.ai/attestation") == "https://api.ppq.ai/attestation"
 
 
 def test_page_escapes_untrusted_values():

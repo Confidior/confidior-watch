@@ -69,6 +69,16 @@ RECORD_FIELDS = (
     "gpu_evidence_count",
     "nonce",
     "workload_digests",
+    # verification results (see watch/checks.py)
+    "signature_valid",
+    "signature_error",
+    "tcb_status",
+    "tcb_reference",
+    "freshness_bound",
+    "freshness_note",
+    "tls_group",
+    "tls_pq",
+    "tls_error",
 )
 
 
@@ -108,6 +118,17 @@ class Observation:
     gpu_evidence_count: str = ""
     nonce: str = ""
     workload_digests: str = ""
+    # Verification, not reachability. Empty means "not attempted or unavailable",
+    # which is different from "false" and must stay distinguishable in the log.
+    signature_valid: str = ""
+    signature_error: str = ""
+    tcb_status: str = ""
+    tcb_reference: str = ""
+    freshness_bound: str = ""
+    freshness_note: str = ""
+    tls_group: str = ""
+    tls_pq: str = ""
+    tls_error: str = ""
     note: str = ""
 
     def to_json(self) -> str:
@@ -135,13 +156,28 @@ OBSERVATION_KEYS = set(RECORD_FIELDS) - {"observed_at", "vendor", "source_url",
                                          "http_status", "response_sha256", "raw_bytes"}
 
 
+def _nonce_of(url: str) -> str:
+    """The challenge carried by a request-bound URL, if any."""
+    if "nonce=" not in url:
+        return ""
+    return url.split("nonce=", 1)[1].split("&", 1)[0]
+
+
 def collect(
     sources: list[Source],
     *,
     fetcher: Callable[[str], tuple[int, bytes]] | None = None,
     observed_at: str | None = None,
+    measure_tls: bool = True,
+    tls_runner: Callable[[list[str]], str] | None = None,
 ) -> list[Observation]:
-    """Collect one observation pass over every source. Never raises per-source."""
+    """Collect one observation pass over every source. Never raises per-source.
+
+    Each source is both *parsed* (what did it publish, has that changed) and
+    *checked* (was what it published actually valid). The two are independent:
+    a source can parse cleanly and fail verification, which is the interesting
+    case, and both facts are recorded rather than merged.
+    """
     do_fetch = fetcher or fetch
     stamp = observed_at or utc_now_iso()
     observations: list[Observation] = []
@@ -149,10 +185,12 @@ def collect(
     for source in sources:
         status, raw = do_fetch(source.url)
         digest = hashlib.sha256(raw).hexdigest() if raw else ""
+        payload: Any = None
 
         if status == 200 and raw:
             try:
-                parsed = source.parse(json.loads(raw.decode("utf-8")))
+                payload = json.loads(raw.decode("utf-8"))
+                parsed = source.parse(payload)
             except (json.JSONDecodeError, UnicodeDecodeError) as e:
                 parsed = [{"note": f"decode failed: {type(e).__name__}"}]
             except Exception as e:  # noqa: BLE001 - a parser bug must not kill the run
@@ -161,8 +199,47 @@ def collect(
         else:
             parsed = [{"note": f"fetch returned status {status}"}]
 
+        # --- verification: signature, TCB, freshness, wire ---
+        check_fields: dict[str, str] = {}
+        if payload is not None and source.check is not None:
+            try:
+                checks = source.check(payload, _nonce_of(source.url))
+                check_fields = checks.as_fields()
+            except TypeError:
+                # A checker that takes only the payload.
+                try:
+                    checks = source.check(payload)
+                    check_fields = checks.as_fields()
+                except Exception as e:  # noqa: BLE001
+                    logger.warning("check failed for %s: %s", source.vendor, e)
+                    check_fields = {"signature_error": f"check raised {type(e).__name__}"}
+            except Exception as e:  # noqa: BLE001
+                logger.warning("check failed for %s: %s", source.vendor, e)
+                check_fields = {"signature_error": f"check raised {type(e).__name__}"}
+
+        if measure_tls and source.host:
+            try:
+                from watch.checks import measure_tls_group
+
+                group, err = measure_tls_group(source.host, runner=tls_runner)
+                check_fields["tls_group"] = group
+                check_fields["tls_error"] = err
+                check_fields["tls_pq"] = (
+                    "hybrid" if group and any(g in group for g in ("MLKEM",)) else
+                    ("classical" if group else "")
+                )
+            except Exception as e:  # noqa: BLE001
+                logger.warning("tls measurement failed for %s: %s", source.host, e)
+
         for item in parsed:
             fields = {k: v for k, v in item.items() if k in OBSERVATION_KEYS}
+            # Verification fills gaps the parser left blank, and never overwrites
+            # something the parser found. The parser emits empty keys for fields
+            # a given shape lacks, so a plain setdefault would never fire.
+            for key, value in check_fields.items():
+                if key in OBSERVATION_KEYS and str(value) and not fields.get(key):
+                    fields[key] = value
+
             observations.append(
                 Observation(
                     observed_at=stamp,
@@ -174,6 +251,7 @@ def collect(
                     platform=str(fields.pop("platform", "") or source.platform),
                     workload=str(fields.pop("workload", "")),
                     note=str(fields.pop("note", "")),
+                    nonce=str(fields.pop("nonce", "") or _nonce_of(source.url)),
                     **{k: str(v) for k, v in fields.items()},
                 )
             )
