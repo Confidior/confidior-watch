@@ -41,6 +41,11 @@ IDENTITY_FIELDS = (
     "repo_commit",
     "cert_spki_sha256",
     "doc_format",
+    "protocol",
+    "protocol_commit",
+    "release_id",
+    "release_bundle",
+    "workload_digests",
 )
 
 FIELD_LABELS = {
@@ -52,6 +57,11 @@ FIELD_LABELS = {
     "repo_commit": "source commit",
     "cert_spki_sha256": "cert SPKI",
     "doc_format": "document format",
+    "protocol": "attestation protocol",
+    "protocol_commit": "protocol commit",
+    "release_id": "release",
+    "release_bundle": "release bundle",
+    "workload_digests": "workload digests",
 }
 
 

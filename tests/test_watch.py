@@ -21,6 +21,7 @@ from watch.collector import (  # noqa: E402
 from watch.sources import (  # noqa: E402
     Source,
     default_sources,
+    parse_c8s,
     parse_dstack,
     parse_nsm_cose,
 )
@@ -187,8 +188,9 @@ def test_heartbeat_names_the_vendors_seen():
 
 def test_default_sources_is_capped_and_never_grows_silently():
     """Depth over breadth. Growing this list is a deliberate act with a cost."""
+    vendors = {s.vendor for s in default_sources()}
     assert len(default_sources()) <= 8
-    assert {s.vendor for s in default_sources()} == {"redpill", "phala", "ppq"}
+    assert vendors == {"redpill", "phala", "ppq", "confidentialai"}
 
 
 # ---------------------------------------------------------------------------
@@ -251,3 +253,90 @@ def test_vendored_rekor_does_not_import_the_engine():
     assert "confidior_engine" not in src
     assert "src.export" not in src
     assert "VENDORED_FROM" in src  # provenance is recorded, not implied
+
+
+# ---------------------------------------------------------------------------
+# Confidential AI (c8s): request-bound by nonce, deepest source in the set.
+# ---------------------------------------------------------------------------
+
+C8S_SAMPLE = {
+    "schemaVersion": "1",
+    "nonce": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "scope": "launch-or-admission-only",
+    "operationalStatus": "not-verified",
+    "release": {"id": "v0.13.28-rc.2", "bundleSha256": "sha256:82859291c495814e7fe6347d58d526bb5152cff88f520db1eba19cc6258a5586"},
+    "gpuEvidence": {"evidence": [], "reason": "no gpu_attested field in this protocol"},
+    "tls": {"binding": {"status": "requires-attest-lb", "publicKeySha256": None}},
+    "c8s": {
+        "attestationProtocol": "c8s/attest-pq/v1+xwing",
+        "attestationProtocolC8sCommit": "466ce79",
+        "meshCaSha256": "sha256:0dea2dd7ee630fe23b9de95d8a835e8bacff2702c79f7a3149e22cae9dac7426",
+        "activeAllowlist": {
+            "document": {
+                "schema": "c8s.allowlist/v1",
+                "workloads": {
+                    "gateway": {"containers": [{"digest": "sha256:3532143fd358d46acc2b3eb4902e5c5b"}]},
+                    "inference-worker-0": {"containers": [{"digest": "sha256:aaa111"}]},
+                },
+            }
+        },
+    },
+}
+
+
+def test_parse_c8s_extracts_the_measured_allowlist():
+    (obs,) = parse_c8s(C8S_SAMPLE)
+    assert obs["workload_count"] == "2"
+    assert obs["platform"] == "confidential-ai-c8s"
+    assert len(obs["measurement"]) == 64
+
+
+def test_parse_c8s_records_per_workload_digests_so_a_diff_names_the_component():
+    """The deepest property of this source: which component changed, not just that one did."""
+    (obs,) = parse_c8s(C8S_SAMPLE)
+    digests = json.loads(obs["workload_digests"])
+    assert digests["gateway"].startswith("sha256:3532143")
+
+
+def test_parse_c8s_records_self_described_limits():
+    """The payload states what it does not prove. A change there is as interesting
+    as a change in a digest, so it must be stored rather than dropped."""
+    (obs,) = parse_c8s(C8S_SAMPLE)
+    assert obs["scope"] == "launch-or-admission-only"
+    assert obs["operational_status"] == "not-verified"
+    assert obs["tls_binding_status"] == "requires-attest-lb"
+    assert obs["gpu_evidence_count"] == "0"
+
+
+def test_parse_c8s_measures_the_allowlist_not_the_whole_response():
+    """The allowlist hash must be stable across runs that differ only in nonce."""
+    a = dict(C8S_SAMPLE, nonce="nonce-A")
+    b = dict(C8S_SAMPLE, nonce="nonce-B")
+    assert parse_c8s(a)[0]["measurement"] == parse_c8s(b)[0]["measurement"]
+
+
+def test_parse_c8s_changes_when_a_workload_digest_changes():
+    import copy
+
+    mutated = copy.deepcopy(C8S_SAMPLE)
+    mutated["c8s"]["activeAllowlist"]["document"]["workloads"]["gateway"]["containers"][0]["digest"] = "sha256:CHANGED"
+    assert parse_c8s(mutated)[0]["measurement"] != parse_c8s(C8S_SAMPLE)[0]["measurement"]
+
+
+def test_parse_c8s_records_note_on_empty_allowlist():
+    (obs,) = parse_c8s({"c8s": {"activeAllowlist": {"document": {"workloads": {}}}}})
+    assert obs["note"] == "no workloads in allowlist"
+
+
+def test_parse_c8s_survives_malformed_shapes():
+    for bad in [None, [], "x", {}, {"c8s": None}, {"c8s": {"activeAllowlist": None}}]:
+        out = parse_c8s(bad)
+        assert out and isinstance(out[0], dict)
+
+
+def test_c8s_url_carries_a_fresh_nonce_each_time():
+    from watch.sources import _nonce_url
+
+    a, b = _nonce_url(), _nonce_url()
+    assert a != b
+    assert "nonce=" in a and a.count("nonce=") == 1

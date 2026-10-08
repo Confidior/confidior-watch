@@ -58,6 +58,17 @@ RECORD_FIELDS = (
     "cert_spki_sha256",
     "doc_bytes",
     "note",
+    "protocol",
+    "protocol_commit",
+    "release_id",
+    "release_bundle",
+    "workload_count",
+    "scope",
+    "operational_status",
+    "tls_binding_status",
+    "gpu_evidence_count",
+    "nonce",
+    "workload_digests",
 )
 
 
@@ -86,6 +97,17 @@ class Observation:
     doc_format: str = ""
     cert_spki_sha256: str = ""
     doc_bytes: str = ""
+    protocol: str = ""
+    protocol_commit: str = ""
+    release_id: str = ""
+    release_bundle: str = ""
+    workload_count: str = ""
+    scope: str = ""
+    operational_status: str = ""
+    tls_binding_status: str = ""
+    gpu_evidence_count: str = ""
+    nonce: str = ""
+    workload_digests: str = ""
     note: str = ""
 
     def to_json(self) -> str:

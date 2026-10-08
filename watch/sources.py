@@ -182,6 +182,93 @@ def parse_nsm_cose(payload: Any) -> list[dict[str, Any]]:
 
 
 # --------------------------------------------------------------------------
+# Confidential AI (c8s)
+#
+# Request-bound: the response is generated against a nonce you supply, which is
+# what makes freshness checkable rather than assumed. A base64url nonce of 43
+# characters satisfies it; anything else is rejected as ``invalid_nonce``.
+#
+# This is the deepest source in the set. It publishes a measured container
+# allowlist -- per-workload image digests, one per component of the serving
+# stack -- plus a release bundle, an attestation protocol identifier and its
+# commit, and a mesh CA hash. That is enough to see *which component* changed,
+# not merely that something did.
+#
+# Note the honesty in the payload itself, which is worth preserving rather than
+# papering over: ``scope`` reads ``launch-or-admission-only``, ``gpuEvidence``
+# carries an empty list and a reason string, and the ``tls`` binding reports
+# ``requires-attest-lb``. The vendor is being explicit about what this response
+# does *not* prove. A continuity log should store those self-described limits,
+# because a change in them is as interesting as a change in a digest.
+# --------------------------------------------------------------------------
+
+
+def _nonce_url() -> str:
+    """Build a fresh request URL with a new nonce.
+
+    Called per run rather than stored, so each observation carries its own
+    freshness challenge. The nonce used is recorded in the observation, which is
+    what lets a reader confirm the response was bound to this run.
+    """
+    import base64
+    import os
+
+    nonce = base64.urlsafe_b64encode(os.urandom(32)).decode().rstrip("=")
+    return f"https://api.confidential.ai/attestation?nonce={nonce}"
+
+
+def parse_c8s(payload: Any) -> list[dict[str, Any]]:
+    """Parse the c8s attestation response."""
+    if not isinstance(payload, dict):
+        return [{"note": "unexpected payload type"}]
+
+    c8s = payload.get("c8s") or {}
+    allowlist = (c8s.get("activeAllowlist") or {}).get("document") or {}
+    workloads = allowlist.get("workloads") or {}
+
+    # Hash the workload allowlist rather than storing all of it. The individual
+    # digests are recorded in ``workload_digests`` for a readable diff; the hash
+    # is what answers "did the measured stack change" in one value.
+    import hashlib
+
+    canonical = json.dumps(workloads, sort_keys=True, separators=(",", ":")).encode()
+    allowlist_hash = hashlib.sha256(canonical).hexdigest()
+
+    per_workload = {
+        name: str(((w.get("containers") or [{}])[0]).get("digest") or "")
+        for name, w in workloads.items()
+        if isinstance(w, dict)
+    }
+
+    release = payload.get("release") or {}
+    tls_block = payload.get("tls") or {}
+    gpu = payload.get("gpuEvidence") or {}
+
+    out: dict[str, Any] = {
+        "workload": "inference-stack",
+        "platform": "confidential-ai-c8s",
+        "measurement": allowlist_hash,
+        "cert_spki_sha256": str(c8s.get("meshCaSha256") or ""),
+        "protocol": str(c8s.get("attestationProtocol") or ""),
+        "protocol_commit": str(c8s.get("attestationProtocolC8sCommit") or ""),
+        "release_id": str(release.get("id") or ""),
+        "release_bundle": str(release.get("bundleSha256") or ""),
+        "workload_count": str(len(workloads)),
+        # Self-described limits. Stored because a change here is a change in
+        # what the evidence claims to cover.
+        "scope": str(payload.get("scope") or ""),
+        "operational_status": str(payload.get("operationalStatus") or ""),
+        "tls_binding_status": str((tls_block.get("binding") or {}).get("status") or ""),
+        "gpu_evidence_count": str(len(gpu.get("evidence") or [])) if isinstance(gpu, dict) else "0",
+        "nonce": str(payload.get("nonce") or ""),
+        "workload_digests": json.dumps(per_workload, sort_keys=True, separators=(",", ":")),
+    }
+    if not workloads:
+        out["note"] = "no workloads in allowlist"
+    return [out]
+
+
+# --------------------------------------------------------------------------
 # The v0 source set.
 #
 # Three sources, deliberately. See the internal strategy note section 6: five to eight
@@ -209,5 +296,11 @@ def default_sources() -> list[Source]:
             url="https://api.ppq.ai/attestation",
             parse=parse_nsm_cose,
             platform="aws-nitro",
+        ),
+        Source(
+            vendor="confidentialai",
+            url=_nonce_url(),
+            parse=parse_c8s,
+            platform="confidential-ai-c8s",
         ),
     ]
