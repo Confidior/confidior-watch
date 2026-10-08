@@ -191,3 +191,49 @@ def test_checks_survive_malformed_payloads():
         assert isinstance(check_dstack(bad), Checks)
         assert isinstance(check_nitro(bad), Checks)
         assert isinstance(check_c8s(bad, "n"), Checks)
+
+
+# --- challenge binding (dstack) --------------------------------------------
+
+
+def test_dstack_freshness_true_when_challenge_is_inside_the_quote():
+    """The challenge must be in the *quote's* report_data. A copy the payload
+    repeats outside the quote would prove nothing about the enclave."""
+    payload = {"attestation": {"report_data": "N1", "evidence": {"quote_report_data": "xxN1xx"}}}
+    c = check_dstack(payload, "N1")
+    assert c.freshness_bound == "true"
+    assert "quote report_data carries the challenge" in c.freshness_note
+
+
+def test_dstack_freshness_false_when_the_endpoint_ignores_the_challenge():
+    """Phala accepts ?nonce= and does not put it in the quote. That is worse
+    than rejecting it, because it looks like it bound."""
+    payload = {"attestation": {"report_data": "aa", "evidence": {"quote_report_data": "aa"}}}
+    c = check_dstack(payload, "N1")
+    assert c.freshness_bound == "false"
+    assert "absent from the quote" in c.freshness_note
+
+
+def test_dstack_challenge_outside_the_quote_is_not_accepted():
+    """A binding that is present in the payload but not in the quote is not a
+    binding: the payload is not what the hardware signed."""
+    payload = {"attestation": {"report_data": "N1", "evidence": {"quote_report_data": "other"}}}
+    assert check_dstack(payload, "N1").freshness_bound == "false"
+
+
+def test_challenge_url_carries_a_distinct_nonce_each_rung():
+    from watch.sources import challenge_url
+
+    a, an = challenge_url("https://x/y")
+    b, bn = challenge_url("https://x/y")
+    assert a != b and an != bn
+    assert f"nonce={an}" in a
+
+
+def test_challengeable_sources_send_a_nonce():
+    """RedPill and Phala are challengeable; verified by experiment, not assumed."""
+    from watch.sources import default_sources
+
+    for s in default_sources():
+        if s.vendor in ("redpill", "phala", "confidentialai"):
+            assert "nonce=" in s.url, f"{s.vendor} should send a challenge"

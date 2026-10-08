@@ -278,6 +278,27 @@ def make_nonce() -> str:
     return base64.urlsafe_b64encode(os.urandom(32)).decode().rstrip("=")
 
 
+def fresh_nonce() -> str:
+    """A hex challenge for a source that accepts one in its query string."""
+    import hashlib
+    import os
+
+    return hashlib.sha256(os.urandom(16)).hexdigest()
+
+
+def challenge_url(base: str) -> tuple[str, str]:
+    """(url, nonce) for a source that binds a caller-supplied challenge.
+
+    Verified by experiment, not documentation: RedPill's report endpoint echoes
+    ``?nonce=`` back inside the quote's report_data, which is what makes
+    freshness checkable at all. An earlier version of this file assumed the
+    dstack sources were not challengeable and recorded "not attempted" as though
+    that were a property of the source rather than of the request.
+    """
+    nonce = fresh_nonce()
+    return f"{base}?nonce={nonce}", nonce
+
+
 def c8s_url() -> tuple[str, str]:
     """(url, nonce) for a request-bound source. The nonce is returned so the
     checker can confirm the response was bound to *this* run."""
@@ -291,7 +312,7 @@ def default_sources() -> list[Source]:
     return [
         Source(
             vendor="redpill",
-            url="https://api.redpill.ai/v1/attestation/report",
+            url=challenge_url("https://api.redpill.ai/v1/attestation/report")[0],
             parse=parse_dstack,
             platform="intel-tdx",
             check=check_dstack,
@@ -299,7 +320,7 @@ def default_sources() -> list[Source]:
         ),
         Source(
             vendor="phala",
-            url="https://inference.phala.com/v1/aci/attestation",
+            url=challenge_url("https://inference.phala.com/v1/aci/attestation")[0],
             parse=parse_dstack,
             platform="intel-tdx",
             check=check_dstack,

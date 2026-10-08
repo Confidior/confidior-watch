@@ -148,6 +148,45 @@ def test_nonce_is_stripped_from_the_displayed_source():
     assert strip_query("https://api.ppq.ai/attestation") == "https://api.ppq.ai/attestation"
 
 
+def test_full_response_hash_is_shown_not_truncated():
+    """A truncated hash cannot be compared to anything. It is decoration."""
+    rows = [rec("v", "t1", measurement="m", response_sha256="a" * 64)]
+    html = render(rows, generated_at="t")
+    assert "a" * 64 in html
+    assert "&hellip;" not in html.split("response sha256")[1][:400]
+
+
+def test_each_row_links_to_the_source_so_a_reader_can_recheck():
+    rows = [rec("v", "t1", measurement="m", source_url="https://api.example/x")]
+    html = render(rows, generated_at="t")
+    assert 'href="https://api.example/x"' in html
+    assert "re-fetch" in html
+
+
+def test_page_explains_what_each_check_means():
+    html = _flat(render(ROWS, generated_at="t"))
+    assert "What was verified" in html
+    assert "root of trust" in html
+    assert "CVEs map against" in html
+
+
+def test_tcb_is_tracked_as_identity():
+    """TCB moves on microcode updates and is what CVEs map against. A log that
+    does not track it cannot connect to the attack corpus."""
+    from watch.render import IDENTITY_FIELDS
+
+    assert "tcb_version" in IDENTITY_FIELDS
+    assert "tcb_reference" in IDENTITY_FIELDS
+
+
+def test_tcb_change_is_reported_as_a_change():
+    rows = [rec("v", "t1", tcb_version="0b01050000000000"),
+            rec("v", "t2", tcb_version="0b01060000000000")]
+    changes = find_changes(rows)
+    assert len(changes) == 1
+    assert changes[0].field == "tcb_version"
+
+
 def test_page_escapes_untrusted_values():
     rows = [rec("v<script>", "t1", measurement="<img src=x onerror=alert(1)>")]
     html = _flat(render(rows, generated_at="t"))

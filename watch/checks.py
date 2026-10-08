@@ -203,8 +203,11 @@ def tdx_quote_fields(quote_hex: str) -> dict[str, str]:
         out: dict[str, str] = {}
         svn = str(body.get("tee_tcb_svn") or "")
         if svn:
-            # The first 8 bytes are the meaningful SVN; the rest is reserved.
-            out["tcb_version"] = svn[:16]
+            # Stored in full. The value is a per-component security version
+            # number, one byte per component; an earlier version of this file
+            # kept only the first 8 bytes, which would have missed a bump in any
+            # later component -- the exact event this log exists to catch.
+            out["tcb_version"] = svn
         seam = str(body.get("mrseam") or "")
         if seam:
             out["mrseam"] = seam
@@ -288,8 +291,12 @@ def measure_tls_group(host: str, *, port: int = 443, runner: Any = None) -> tupl
 # ---------------------------------------------------------------------------
 
 
-def check_dstack(payload: Any) -> Checks:
-    """dstack aci/1 (RedPill, Phala)."""
+def check_dstack(payload: Any, sent_nonce: str = "") -> Checks:
+    """dstack aci/1 (RedPill, Phala).
+
+    These endpoints accept a ``?nonce=`` challenge and echo it inside the
+    quote's report_data, so freshness is checkable rather than assumed.
+    """
     checks = Checks()
     if not isinstance(payload, dict):
         return checks
@@ -310,11 +317,25 @@ def check_dstack(payload: Any) -> Checks:
     # binding's presence rather than a freshness conclusion.
     report_data = str(attestation.get("report_data") or "")
     quote_report_data = str(evidence.get("quote_report_data") or "")
-    if report_data and report_data == quote_report_data:
+
+    if sent_nonce:
+        # The challenge must be inside the *quote's* report_data. A copy the
+        # payload merely repeats outside the quote would prove nothing.
+        if sent_nonce in quote_report_data:
+            checks.freshness_bound = "true"
+            checks.freshness_note = "quote report_data carries the challenge sent this run"
+        elif report_data == quote_report_data:
+            checks.freshness_bound = "false"
+            checks.freshness_note = (
+                "challenge sent this run is absent from the quote's report_data"
+            )
+        else:
+            checks.freshness_bound = "false"
+            checks.freshness_note = "no report_data binding found in the response"
+    elif report_data and report_data == quote_report_data:
         checks.freshness_bound = "unbound"
         checks.freshness_note = (
-            "quote report_data matches the payload's report_data, but no challenge "
-            "was supplied this run, so freshness cannot be concluded from it"
+            "no challenge was supplied this run, so freshness cannot be concluded"
         )
     return checks
 

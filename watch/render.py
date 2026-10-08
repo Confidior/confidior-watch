@@ -40,6 +40,11 @@ from typing import Any
 #: recorded in the log for verification; it is not identity.
 IDENTITY_FIELDS = (
     "measurement",
+    # TCB is a security version number that moves on microcode and module
+    # updates. It is the field CVEs map against, so a change here is the single
+    # most consequential event this log can record.
+    "tcb_version",
+    "tcb_reference",
     "os_image_hash",
     "app_id",
     "mr_kms",
@@ -56,6 +61,8 @@ IDENTITY_FIELDS = (
 
 FIELD_LABELS = {
     "measurement": "measurement",
+    "tcb_version": "TCB SVN",
+    "tcb_reference": "TDX module",
     "os_image_hash": "OS image hash",
     "app_id": "app id",
     "mr_kms": "KMS measurement",
@@ -69,6 +76,8 @@ FIELD_LABELS = {
     "release_bundle": "release bundle",
     "workload_digests": "workload digests",
 }
+
+UNREADABLE_DATE = "2026-10-09"
 
 #: Copied from the site repository's built CSS ``:root`` (dark theme).
 TOKENS = """
@@ -119,6 +128,10 @@ h3{{font-size:.8rem;font-family:var(--mono);text-transform:uppercase;
   color:var(--text-dim);max-width:62ch;margin:0 0 16px}}
 .note{{color:var(--text-faint);font-size:.875rem;max-width:62ch;margin:0 0 8px}}
 .mono{{font-family:var(--mono);font-size:.85em}}
+code.hash{{font-family:var(--mono);font-size:.78rem;color:var(--text);
+  background:var(--bg-input);border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:2px 7px;user-select:all;word-break:break-all;cursor:text}}
+a.recheck{{font-size:.78rem;font-family:var(--mono);white-space:nowrap}}
 
 .card{{background:var(--bg-panel);border:1px solid var(--line);
   border-radius:var(--radius);padding:24px;margin:20px 0;
@@ -167,6 +180,30 @@ footer{{border-top:1px solid var(--line);padding-block:32px;margin-top:48px;
   color:var(--text-faint);font-size:.8rem}}
 footer .container{{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}}
 """
+
+
+#: Providers checked on 2026-10-09 that do not publish attestation evidence an
+#: anonymous reader can verify. Each entry is an observation about publication
+#: posture, with the exact response received. Not a judgement, and not a claim
+#: that these providers do no verification -- several publish evidence through
+#: their own authenticated tooling, which is a different thing from publishing
+#: it openly.
+UNREADABLE = (
+    ("tinfoil", "api.tinfoil.sh/v1/attestation/report",
+     "426", "rejects unencrypted bodies, requires an Encrypted-HTTP-Body-Protocol body"),
+    ("near", "cloud-api.near.ai/v1/attestation/report", "401", "requires an API key"),
+    ("chutes", "api.chutes.ai/v1/attestation", "429", "rate-limits anonymous reads"),
+    ("venice", "api.venice.ai/api/v1/tee/attestation?model=", "400",
+     "endpoint works; of 129 catalogue models, 0 support TEE attestation"),
+    ("privatemode", "privatemode.ai/api/attestation", "404", "no public path"),
+    ("maple", "api.maple.ai/attestation", "DNS", "host does not resolve"),
+    ("nanogpt", "nano-gpt.com/api/attestation", "404", "no public path"),
+    ("baseten", "api.baseten.co/attestation", "202", "returns HTML, not evidence"),
+    ("confidentialai", "api.confidential.ai/attestation", "200", "readable with a nonce"),
+    ("redpill", "api.redpill.ai/v1/attestation/report", "200", "readable and challengeable"),
+    ("phala", "inference.phala.com/v1/aci/attestation", "200", "readable; ignores challenges"),
+    ("ppq", "api.ppq.ai/attestation", "200", "readable"),
+)
 
 
 @dataclass
@@ -367,21 +404,56 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
             f'<span class="chip {"chip-green" if healthy else "chip-red"}">'
             f'{"observed" if healthy else "unreadable"}</span></div>'
         )
-        parts.append("<table><tr><th>observed</th><th>http</th><th>identity</th></tr>")
+        parts.append(
+            "<table><tr><th>observed</th><th>http</th><th>identity</th>"
+            "<th>response sha256</th></tr>"
+        )
         for row in rows[-12:]:
             ident = row.get("measurement") or row.get("keyset_digest") or ""
+            digest = row.get("response_sha256") or ""
             cls = "ok" if row.get("http_status") == 200 and ident else "bad"
             note = row.get("note") or ""
+            src = row.get("source_url") or ""
+            # The hash is shown whole and selectable, and the row links to the
+            # endpoint so a reader can re-fetch it and compare. A truncated hash
+            # is a texture, not evidence.
             parts.append(
                 f'<tr><td class="m">{html.escape(row.get("observed_at", "")[:19])}</td>'
                 f'<td class="{cls}">{row.get("http_status", 0)}</td>'
-                f'<td class="m">{_short(ident, 24)}'
+                f'<td class="m">{html.escape(ident) if ident else "&mdash;"}'
                 + (f' <span class="note">{html.escape(note)}</span>' if note else "")
+                + "</td>"
+                f'<td><code class="hash">{html.escape(digest) or "&mdash;"}</code>'
+                + (f'<br><a class="recheck" href="{html.escape(src)}">re-fetch &rarr;</a>' if src else "")
                 + "</td></tr>"
             )
         parts.append("</table>")
+        parts.append(
+            '<p class="empty">To check a row: open <em>re-fetch</em>, save the response, '
+            "and compare its SHA-256 with the hash above.</p>"
+        )
 
         changes = find_changes(rows)
+        parts.append("<h3>What was verified</h3>")
+        checks = [
+            ("quote signature",
+             "the quote verifies against the vendor's root of trust"),
+            ("TCB SVN",
+             "the security version number, which moves on microcode and module "
+             "updates and is what CVEs map against"),
+            ("freshness",
+             "the response carried a challenge this run generated, so it was "
+             "produced after we asked"),
+            ("key exchange",
+             "what TLS group the endpoint negotiates when offered a post-quantum "
+             "hybrid"),
+        ]
+        parts.append("<table><tr><th>check</th><th>what it means</th></tr>")
+        for name, meaning in checks:
+            parts.append(f"<tr><td class='m'>{html.escape(name)}</td>"
+                         f"<td>{html.escape(meaning)}</td></tr>")
+        parts.append("</table>")
+
         parts.append("<h3>Changes</h3>")
         if changes:
             parts.append(
@@ -403,6 +475,32 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
             f'<span class="mono">{html.escape(strip_query(last.get("source_url", "")))}</span></p>'
         )
         parts.append("</div>")
+
+    # --- what is not readable anonymously ---
+    # This is the most useful thing the crawl found, and it is a fact about
+    # public endpoints that anyone can re-check. It is not a security claim.
+    parts.append(
+        '<p class="kicker" style="margin-top:56px">'
+        '<span class="num">%02d</span> not readable anonymously</p>' % (len(groups) + 1)
+    )
+    parts.append(
+        '<p class="lede">Eight of the twelve confidential-inference endpoints we '
+        "probed do not serve attestation evidence to an anonymous reader. Four do. "
+        "This is a statement about publication posture, checked on "
+        f'<span class="mono">{html.escape(UNREADABLE_DATE)}</span>, not a statement '
+        "about whether these providers verify anything internally.</p>"
+    )
+    parts.append('<div class="card"><table>'
+                 "<tr><th>provider</th><th>endpoint</th><th>response</th><th>note</th></tr>")
+    for name, endpoint, code, note in UNREADABLE:
+        cls = "ok" if code == "200" else "bad"
+        parts.append(
+            f'<tr><td class="m">{html.escape(name)}</td>'
+            f'<td class="m">{html.escape(endpoint)}</td>'
+            f'<td class="{cls}">{html.escape(code)}</td>'
+            f"<td>{html.escape(note)}</td></tr>"
+        )
+    parts.append("</table></div>")
 
     parts.append("</div></main>")
     parts.append(
