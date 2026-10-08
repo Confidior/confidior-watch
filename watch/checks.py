@@ -37,6 +37,7 @@ import os
 import subprocess
 import sys
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -359,3 +360,237 @@ def check_c8s(payload: Any, sent_nonce: str) -> Checks:
     returned = str(payload.get("nonce") or "")
     checks.freshness_bound, checks.freshness_note = freshness_from_nonce(sent_nonce, returned)
     return checks
+
+
+# ---------------------------------------------------------------------------
+# Gate model.
+# ---------------------------------------------------------------------------
+#
+# The checks above each answer one question. A reader wants to know which
+# *layer* of the claim survived, because "hardware is genuine but the workload
+# is unidentified" and "the hardware quote did not verify" are very different
+# findings that a single pass/fail collapses together.
+#
+# So each observation is scored as named gates, separately, and every gate
+# carries a confidence level saying how strongly the gate's own conclusion is
+# established. The ladder is deliberately ordered from strongest to weakest and
+# a gate is never upgraded: a vendor's statement about itself is DECLARED no
+# matter how plausible it is, because we did not check it.
+
+
+class EvidenceStrength(str, Enum):
+    """How strongly a gate's conclusion is established.
+
+    These are ordered. VERIFIED means we performed a cryptographic check
+    ourselves. DECLARED means we recorded what the vendor said and did not
+    check it, which is the weakest useful thing an observation can be.
+    """
+
+    VERIFIED = "verified"
+    CORROBORATED = "corroborated"
+    DECLARED = "declared"
+    INFERRED = "inferred"
+    UNKNOWN = "unknown"
+
+
+class GateStatus(str, Enum):
+    """A gate's outcome. UNVERIFIABLE is distinct from FAILED by design."""
+
+    GOOD = "good"
+    WARNING = "warning"
+    BAD = "bad"
+    UNVERIFIABLE = "unverifiable"
+    NOT_APPLICABLE = "n/a"
+
+
+@dataclass(frozen=True)
+class Gate:
+    """One scored layer of a claim."""
+
+    name: str
+    status: GateStatus
+    strength: EvidenceStrength
+    note: str = ""
+
+    def as_dict(self) -> dict[str, str]:
+        return {
+            "gate": self.name,
+            "status": self.status.value,
+            "strength": self.strength.value,
+            "note": self.note[:200],
+        }
+
+
+def _tri_state(value: str, *, good: str = "true") -> GateStatus:
+    """Map the stringly-typed check fields onto a gate status.
+
+    The check fields use "" for 'not attempted', which is not a failure. Mapping
+    that to BAD would manufacture findings out of probes we never ran.
+    """
+    if value == good:
+        return GateStatus.GOOD
+    if value == "false":
+        return GateStatus.BAD
+    return GateStatus.UNVERIFIABLE
+
+
+def score_gates(checks: Checks, record: dict | None = None) -> list[Gate]:
+    """Score an observation as named gates.
+
+    ``record`` is the observation row, used for the gates that read published
+    fields rather than performing a check. When it is absent those gates are
+    reported as unverifiable rather than silently dropped.
+    """
+    record = record or {}
+    gates: list[Gate] = []
+
+    # Hardware: did the quote verify against the vendor's root of trust?
+    gates.append(
+        Gate(
+            "hardware",
+            _tri_state(checks.signature_valid),
+            # A verified quote is a cryptographic check we ran ourselves.
+            EvidenceStrength.VERIFIED if checks.signature_valid == "true"
+            else EvidenceStrength.UNKNOWN,
+            checks.signature_error or "quote verified against the vendor root of trust",
+        )
+    )
+
+    # Channel binding: does the response bind the key the connection is using?
+    tls_ok = bool(checks.tls_group)
+    gates.append(
+        Gate(
+            "channel binding",
+            GateStatus.GOOD if tls_ok else GateStatus.UNVERIFIABLE,
+            EvidenceStrength.VERIFIED if tls_ok else EvidenceStrength.UNKNOWN,
+            f"negotiated {checks.tls_group}" if tls_ok
+            else (checks.tls_error or "no measurement taken"),
+        )
+    )
+
+    # Freshness: did the response echo the challenge this run generated?
+    gates.append(
+        Gate(
+            "freshness",
+            _tri_state(checks.freshness_bound, good="true")
+            if checks.freshness_bound in ("true", "false")
+            else GateStatus.UNVERIFIABLE,
+            EvidenceStrength.VERIFIED if checks.freshness_bound == "true"
+            else EvidenceStrength.UNKNOWN,
+            checks.freshness_note or "freshness not concluded",
+        )
+    )
+
+    # TCB policy: is the platform's security version the vendor's current one?
+    # UNKNOWN here is honest: the engine reports it when it cannot compare.
+    if checks.tcb_status in ("current",):
+        tcb_status, tcb_strength = GateStatus.GOOD, EvidenceStrength.VERIFIED
+    elif checks.tcb_status in ("outdated", "expired", "revoked"):
+        tcb_status, tcb_strength = GateStatus.BAD, EvidenceStrength.VERIFIED
+    else:
+        tcb_status, tcb_strength = GateStatus.UNVERIFIABLE, EvidenceStrength.UNKNOWN
+    gates.append(
+        Gate(
+            "TCB policy",
+            tcb_status,
+            tcb_strength,
+            checks.tcb_status or "no comparison against a current TCB reference",
+        )
+    )
+
+    # Workload identity: is the measured workload the one we expected?
+    #
+    # This log has no expectation to compare against, so it can never conclude
+    # this gate. That is a real limitation and it is reported as unverifiable
+    # rather than quietly omitted.
+    events = str(record.get("event_names") or "")
+    gates.append(
+        Gate(
+            "workload identity",
+            GateStatus.UNVERIFIABLE,
+            EvidenceStrength.UNKNOWN,
+            f"measured {record.get('measurement', '')[:16]}...; no expected value to compare against"
+            if record.get("measurement") else "no measurement recorded",
+        )
+    )
+
+    # Source provenance: is the running image traceable to a published build?
+    repo = str(record.get("repo_url") or "")
+    commit = str(record.get("repo_commit") or "")
+    if repo and commit:
+        # The vendor named a repo and the measured image carries an event naming
+        # a commit. We did not fetch and rebuild the image, so this is what the
+        # vendor's own evidence states, not something we proved.
+        gates.append(
+            Gate(
+                "source provenance",
+                GateStatus.WARNING,
+                EvidenceStrength.DECLARED,
+                f"vendor states {repo.split('//')[-1]} @ {commit[:12]}; image not rebuilt",
+            )
+        )
+    else:
+        gates.append(
+            Gate(
+                "source provenance",
+                GateStatus.UNVERIFIABLE,
+                EvidenceStrength.UNKNOWN,
+                "no repository or commit published",
+            )
+        )
+
+    # GPU evidence consistency: does attached GPU evidence match the declared
+    # hardware shape?
+    #
+    # This is NOT "is GPU evidence present". Two vendors declare zero GPUs and
+    # attach no GPU evidence, and that AGREES: there is nothing to attest. The
+    # gate only fires when the two disagree, e.g. a declared GPU with an empty
+    # evidence list. A presence check would produce a false accusation here.
+    declared_gpus = str(record.get("gpu_count") or "")
+    attached = str(record.get("nvidia_evidence_count") or "")
+    if declared_gpus == "" or attached == "":
+        gates.append(
+            Gate(
+                "GPU evidence consistency",
+                GateStatus.UNVERIFIABLE,
+                EvidenceStrength.UNKNOWN,
+                "declared GPU count or attached evidence not recorded",
+            )
+        )
+    elif declared_gpus == "0" and attached == "0":
+        gates.append(
+            Gate(
+                "GPU evidence consistency",
+                GateStatus.GOOD,
+                EvidenceStrength.CORROBORATED,
+                "no GPU declared and no GPU evidence attached, which agree",
+            )
+        )
+    elif declared_gpus != "0" and attached == "0":
+        gates.append(
+            Gate(
+                "GPU evidence consistency",
+                GateStatus.BAD,
+                EvidenceStrength.CORROBORATED,
+                f"{declared_gpus} GPU(s) declared but no evidence attached",
+            )
+        )
+    else:
+        gates.append(
+            Gate(
+                "GPU evidence consistency",
+                GateStatus.WARNING,
+                EvidenceStrength.CORROBORATED,
+                f"{declared_gpus} GPU(s) declared, {attached} evidence item(s) attached, not verified",
+            )
+        )
+
+    return gates
+
+
+def gate_summary(gates: list[Gate]) -> dict[str, int]:
+    """Count gates by status, for the compact per-vendor grid."""
+    counts: dict[str, int] = {}
+    for gate in gates:
+        counts[gate.status.value] = counts.get(gate.status.value, 0) + 1
+    return counts

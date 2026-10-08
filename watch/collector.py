@@ -89,6 +89,7 @@ RECORD_FIELDS = (
     "tls_binding_count",
     "tls_binding_domains",
     "key_custody_provider",
+    "gpu_count",
     "nvidia_arch",
     "nvidia_evidence_count",
     "provenance_image_digest",
@@ -167,6 +168,7 @@ class Observation:
     tls_binding_count: str = ""
     tls_binding_domains: str = ""
     key_custody_provider: str = ""
+    gpu_count: str = ""
     nvidia_arch: str = ""
     nvidia_evidence_count: str = ""
     provenance_image_digest: str = ""

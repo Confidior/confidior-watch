@@ -116,6 +116,22 @@ def parse_dstack(payload: Any) -> list[dict[str, Any]]:
     keyset = attestation.get("workload_keyset") or {}
 
     caps = payload.get("service_capabilities") or {}
+
+    # The declared hardware shape. This is what the GPU-evidence consistency
+    # check compares attached evidence AGAINST: two vendors declare zero GPUs
+    # and attach no GPU evidence, and that agrees. Only a mismatch is a finding.
+    evidence = attestation.get("evidence") or {}
+    vm_config = payload.get("vm_config") or (
+        evidence.get("vm_config") if isinstance(evidence, dict) else None
+    ) or {}
+    if isinstance(vm_config, str):
+        try:
+            vm_config = json.loads(vm_config)
+        except json.JSONDecodeError:
+            vm_config = {}
+    gpu_count = ""
+    if isinstance(vm_config, dict) and "num_gpus" in vm_config:
+        gpu_count = str(vm_config.get("num_gpus"))
     receipt_keys = keyset.get("receipt_signing_keys") or []
     e2ee_keys = keyset.get("e2ee_public_keys") or []
     tls_keys = keyset.get("tls_public_keys") or []
@@ -156,6 +172,7 @@ def parse_dstack(payload: Any) -> list[dict[str, Any]]:
             "key_custody_provider": str(
                 (attestation.get("key_custody") or {}).get("provider") or ""
             ),
+            "gpu_count": gpu_count,
             "nvidia_arch": str(nvidia.get("arch") or ""),
             "nvidia_evidence_count": str(len(nvidia.get("evidence_list") or [])),
             # --- provenance of the source tree ---

@@ -34,6 +34,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from watch.checks import Checks, gate_summary, score_gates
+
 #: Fields whose change means the deployment changed. Deliberately excludes
 #: ``raw_bytes`` and ``response_sha256``, which change whenever any byte of the
 #: response moves -- including fields we do not care about. The response hash is
@@ -177,6 +179,14 @@ td.bad{{color:var(--red);font-family:var(--mono)}}
 tr:last-child td{{border-bottom:none}}
 
 .empty{{color:var(--text-faint);font-size:.875rem;margin:6px 0 0}}
+.gatebar{{margin:6px 0 10px;display:flex;gap:6px;flex-wrap:wrap}}
+.g{{font-family:var(--mono);font-size:.72rem;padding:2px 7px;border-radius:3px;
+   border:1px solid var(--line);white-space:nowrap}}
+.g-good{{border-color:var(--text);color:var(--text)}}
+.g-warning{{color:var(--text-faint)}}
+.g-bad{{border-color:#b3261e;color:#b3261e}}
+.g-unverifiable{{color:var(--text-faint);opacity:.8}}
+.g-na{{color:var(--text-faint);opacity:.6}}
 .legend{{margin:0 0 28px;border:1px solid var(--line);border-radius:var(--radius);
   background:var(--bg-panel)}}
 .legend summary{{cursor:pointer;padding:12px 18px;font-family:var(--mono);
@@ -493,6 +503,41 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
             '<p class="empty">To check a row: open <em>re-fetch</em>, save the response, '
             "and compare its SHA-256 with the hash above.</p>"
         )
+
+        # --- the gate grid: which claims survived, and how strongly ---
+        latest = usable[-1] if usable else (rows[-1] if rows else {})
+        checks = Checks(
+            signature_valid=str(latest.get("signature_valid") or ""),
+            signature_error=str(latest.get("signature_error") or ""),
+            tcb_version=str(latest.get("tcb_version") or ""),
+            tcb_status=str(latest.get("tcb_status") or ""),
+            tcb_reference=str(latest.get("tcb_reference") or ""),
+            freshness_bound=str(latest.get("freshness_bound") or ""),
+            freshness_note=str(latest.get("freshness_note") or ""),
+            tls_group=str(latest.get("tls_group") or ""),
+            tls_error=str(latest.get("tls_error") or ""),
+        )
+        gates = score_gates(checks, latest)
+        counts = gate_summary(gates)
+
+        headline = " ".join(
+            f'<span class="g g-{status}">{counts.get(status, 0)} {status}</span>'
+            for status in ("good", "warning", "bad", "unverifiable")
+            if counts.get(status)
+        )
+        parts.append(
+            f'<h3>Gates <span class="note">{len(gates)} scored separately</span></h3>'
+        )
+        parts.append(f'<p class="gatebar">{headline}</p>')
+        parts.append("<table><tr><th>gate</th><th>status</th><th>evidence</th></tr>")
+        for gate in gates:
+            parts.append(
+                f'<tr><td class="m">{html.escape(gate.name)}</td>'
+                f'<td><span class="g g-{gate.status.value}">'
+                f'{html.escape(gate.status.value)}</span></td>'
+                f'<td class="m">{html.escape(gate.strength.value)}</td></tr>'
+            )
+        parts.append("</table>")
 
         # --- the full extracted surface ---
         latest_row = usable[-1] if usable else (rows[-1] if rows else {})
