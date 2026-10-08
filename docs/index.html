@@ -109,7 +109,7 @@ footer .container{display:flex;justify-content:space-between;gap:16px;flex-wrap:
 <h1>Published attestation evidence, over time.</h1>
 <p class="lede">A scheduled crawl that records what vendors publish about their own attestation evidence, so that point-in-time observations become a time series.</p>
 <p class="note">This page observes; it does not grade. No verdict, score or ranking appears here and none is implied. Observations only, gaps visible, not a service, no uptime commitment. Every row carries the SHA-256 of the raw response so you can re-fetch the source and compare.</p>
-<p class="note">Generated <span class="mono">2026-10-08T20:38:23+00:00</span> &middot; 4 observations across 4 sources &middot; 1 run recorded.</p>
+<p class="note">Generated <span class="mono">2026-10-08T20:40:05+00:00</span> &middot; 4 observations across 4 sources &middot; 1 run recorded.</p>
 <p class="note">Each run verifies, not merely fetches: the quote signature against the vendor's root of trust, the TCB security version, whether the response was bound to a challenge this run generated, and what key exchange the endpoint negotiates. A check that could not run is shown as <em>not attempted</em> rather than as a failure, because those are different facts.</p>
 <p class="kicker" style="margin-top:40px"><span class="num">01</span> confidentialai</p>
 <p class="headline first">first observed <span class="stamp">2026-10-08T20:37:59</span> &mdash; one observation, so there is nothing to compare against yet</p>
@@ -197,7 +197,7 @@ footer .container{display:flex;justify-content:space-between;gap:16px;flex-wrap:
 <tr><td class="m">tinfoil</td><td class="m">api.tinfoil.sh/v1/attestation/report</td><td class="bad">426</td><td>rejects unencrypted bodies, requires an Encrypted-HTTP-Body-Protocol body</td></tr>
 <tr><td class="m">near</td><td class="m">cloud-api.near.ai/v1/attestation/report</td><td class="bad">401</td><td>requires an API key</td></tr>
 <tr><td class="m">chutes</td><td class="m">api.chutes.ai/v1/attestation</td><td class="bad">429</td><td>rate-limits anonymous reads</td></tr>
-<tr><td class="m">venice</td><td class="m">api.venice.ai/api/v1/tee/attestation?model=</td><td class="bad">400</td><td>endpoint works; of 129 catalogue models, 0 support TEE attestation</td></tr>
+<tr><td class="m">venice</td><td class="m">api.venice.ai/api/v1/tee/attestation?model=</td><td class="bad">400</td><td>endpoint works and takes a model; 20 models tested, none TEE-capable, 109 rate-limited and untested</td></tr>
 <tr><td class="m">privatemode</td><td class="m">privatemode.ai/api/attestation</td><td class="bad">404</td><td>no public path</td></tr>
 <tr><td class="m">maple</td><td class="m">api.maple.ai/attestation</td><td class="bad">DNS</td><td>host does not resolve</td></tr>
 <tr><td class="m">nanogpt</td><td class="m">nano-gpt.com/api/attestation</td><td class="bad">404</td><td>no public path</td></tr>

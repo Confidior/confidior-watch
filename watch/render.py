@@ -194,7 +194,8 @@ UNREADABLE = (
     ("near", "cloud-api.near.ai/v1/attestation/report", "401", "requires an API key"),
     ("chutes", "api.chutes.ai/v1/attestation", "429", "rate-limits anonymous reads"),
     ("venice", "api.venice.ai/api/v1/tee/attestation?model=", "400",
-     "endpoint works; of 129 catalogue models, 0 support TEE attestation"),
+     "endpoint works and takes a model; 20 models tested, none TEE-capable, "
+     "109 rate-limited and untested"),
     ("privatemode", "privatemode.ai/api/attestation", "404", "no public path"),
     ("maple", "api.maple.ai/attestation", "DNS", "host does not resolve"),
     ("nanogpt", "nano-gpt.com/api/attestation", "404", "no public path"),
