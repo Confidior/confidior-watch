@@ -164,10 +164,13 @@ def test_each_row_links_to_the_source_so_a_reader_can_recheck():
 
 
 def test_page_explains_what_each_check_means():
+    """The legend explains column headers, so it belongs once -- not repeated
+    inside every vendor card, where identical text is just noise."""
     html = _flat(render(ROWS, generated_at="t"))
-    assert "What was verified" in html
-    assert "root of trust" in html
-    assert "CVEs map against" in html
+    assert "What each check means" in html
+    # The check descriptions appear exactly once, in the single legend block.
+    assert html.count("CVEs map against") == 1
+    assert html.count("Intel's PCK") == 1
 
 
 def test_tcb_is_tracked_as_identity():
@@ -204,3 +207,49 @@ def test_render_is_deterministic():
     a = render(ROWS, generated_at="fixed")
     b = render(ROWS, generated_at="fixed")
     assert a == b
+
+
+# --- measured surface -------------------------------------------------------
+
+
+def test_surface_shows_published_fields_and_counts_them():
+    rows = [rec("v", "t1", serving_role="aggregator", e2ee_versions="2",
+                receipt_key_algos="ed25519", receipt_key_count="1")]
+    html = _flat(render(rows, generated_at="t"))
+    assert "Measured surface" in html
+    assert "aggregator" in html
+    assert "fields published" in html
+
+
+def test_empty_gpu_evidence_is_shown_with_its_reason():
+    """An empty evidence list is a finding; the reason is the useful part."""
+    from watch.render import _count_word
+
+    assert _count_word("0", "protocol serves no gpu field") == \
+        "none published (protocol serves no gpu field)"
+    assert _count_word("3", "") == "3"
+    assert _count_word("", "") == ""
+
+
+def test_unpublished_fields_are_counted_not_hidden():
+    """A provider publishing 12 of 28 fields is the interesting fact."""
+    from watch.render import _fmt_keys
+
+    assert _fmt_keys("", "") == ""
+    assert _fmt_keys("ed25519", "1") == "1: ed25519"
+    assert _fmt_keys("", "0") == "0"
+
+
+def test_surface_reports_nothing_readable_rather_than_a_blank_table():
+    rows = [rec("v", "t1", http_status=500, note="fetch returned status 500")]
+    html = _flat(render(rows, generated_at="t"))
+    assert "Nothing readable was published" in html
+
+
+def test_capability_fields_are_not_identity_so_they_do_not_fake_drift():
+    """What a provider *offers* changing is not the same as its deployment
+    changing. Only the second should read as drift."""
+    from watch.render import IDENTITY_FIELDS
+
+    for offered in ("e2ee_versions", "serving_role", "receipt_key_algos"):
+        assert offered not in IDENTITY_FIELDS

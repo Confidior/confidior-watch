@@ -79,6 +79,32 @@ RECORD_FIELDS = (
     "tls_group",
     "tls_pq",
     "tls_error",
+    # declared capability surface (what the provider says it offers)
+    "serving_role",
+    "e2ee_versions",
+    "receipt_key_algos",
+    "receipt_key_count",
+    "e2ee_key_algos",
+    "e2ee_key_count",
+    "tls_binding_count",
+    "tls_binding_domains",
+    "key_custody_provider",
+    "nvidia_arch",
+    "nvidia_evidence_count",
+    "provenance_image_digest",
+    "provenance_image",
+    "event_names",
+    "gpu_evidence_reason",
+    "frontdoor_mode",
+    "frontdoor_platform",
+    "serving_leaf_sha256",
+    "receipt_count",
+    "mesh_ca",
+    "operator_key_status",
+    "operator_keyset_sha256",
+    "schema_version",
+    "hpke_key_present",
+    "cert_spki_der_bytes",
 )
 
 
@@ -129,6 +155,34 @@ class Observation:
     tls_group: str = ""
     tls_pq: str = ""
     tls_error: str = ""
+    # Declared capability surface, as opposed to observed identity. These record
+    # what the provider says it offers: which key types it publishes for
+    # verification, which domains it binds, whether it holds keys of its own.
+    serving_role: str = ""
+    e2ee_versions: str = ""
+    receipt_key_algos: str = ""
+    receipt_key_count: str = ""
+    e2ee_key_algos: str = ""
+    e2ee_key_count: str = ""
+    tls_binding_count: str = ""
+    tls_binding_domains: str = ""
+    key_custody_provider: str = ""
+    nvidia_arch: str = ""
+    nvidia_evidence_count: str = ""
+    provenance_image_digest: str = ""
+    provenance_image: str = ""
+    event_names: str = ""
+    gpu_evidence_reason: str = ""
+    frontdoor_mode: str = ""
+    frontdoor_platform: str = ""
+    serving_leaf_sha256: str = ""
+    receipt_count: str = ""
+    mesh_ca: str = ""
+    operator_key_status: str = ""
+    operator_keyset_sha256: str = ""
+    schema_version: str = ""
+    hpke_key_present: str = ""
+    cert_spki_der_bytes: str = ""
     note: str = ""
 
     def to_json(self) -> str:

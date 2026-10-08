@@ -150,6 +150,7 @@ a.recheck{{font-size:.78rem;font-family:var(--mono);white-space:nowrap}}
 .chip-dim{{color:var(--text-faint);border-color:var(--line)}}
 
 .facts{{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}}
+.recheck-note{{font-family:var(--mono);font-size:.78rem;color:var(--text-faint)}}
 .fact{{font-family:var(--mono);font-size:11px;letter-spacing:.04em;
   padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--line);
   background:var(--bg-panel-2);color:var(--text-dim)}}
@@ -176,6 +177,12 @@ td.bad{{color:var(--red);font-family:var(--mono)}}
 tr:last-child td{{border-bottom:none}}
 
 .empty{{color:var(--text-faint);font-size:.875rem;margin:6px 0 0}}
+.legend{{margin:0 0 28px;border:1px solid var(--line);border-radius:var(--radius);
+  background:var(--bg-panel)}}
+.legend summary{{cursor:pointer;padding:12px 18px;font-family:var(--mono);
+  font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute)}}
+.legend table{{margin:0;padding:0 18px 14px}}
+.legend td:first-child{{white-space:nowrap;color:var(--text)}}
 footer{{border-top:1px solid var(--line);padding-block:32px;margin-top:48px;
   color:var(--text-faint);font-size:.8rem}}
 footer .container{{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}}
@@ -273,6 +280,40 @@ def _short(value: str, n: int = 16) -> str:
     return html.escape(value[:n] + ("&hellip;" if len(value) > n else ""))
 
 
+def _fmt_keys(algos: str, count: str) -> str:
+    """Render a key inventory as "n: a, b" so absence is visibly distinct."""
+    if not algos and not count:
+        return ""
+    return f"{count or '0'}: {algos}" if algos else f"{count}"
+
+
+def _count_word(count: str, reason: str) -> str:
+    """An empty evidence list is a finding, and its stated reason is the useful part."""
+    if count == "":
+        return ""
+    if count != "0":
+        return count
+    return f"none published ({reason})" if reason else "none published"
+
+
+def _recheck_link(src: str) -> str:
+    """A re-fetch affordance, or an honest statement that there cannot be one.
+
+    A source challenged with a nonce cannot be re-fetched from a link: the nonce
+    is single-use and replay-protected, so the same URL returns 409. Offering a
+    link that fails would be worse than offering none, so the endpoint is shown
+    and the reason stated.
+    """
+    if not src:
+        return ""
+    base = strip_query(src)
+    if "nonce=" in src:
+        return (f'<a class="recheck" href="{html.escape(base)}">endpoint &rarr;</a>'
+                '<br><span class="recheck-note">not re-fetchable: this response was '
+                "bound to a single-use challenge, so the same URL now returns 409</span>")
+    return f'<a class="recheck" href="{html.escape(src)}">re-fetch &rarr;</a>'
+
+
 def strip_query(url: str) -> str:
     """The endpoint without its per-run parameters.
 
@@ -329,6 +370,25 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
             "scheduled run has not completed. A gap here is visible on purpose: "
             "silence never reads as a claim on this page.</p></div>"
         )
+
+    parts.append(
+        '<details class="legend"><summary>What each check means</summary>'
+        "<table><tr><th>check</th><th>what it means</th></tr>"
+        "<tr><td class='m'>quote signature</td>"
+        "<td>the quote verifies against the vendor's root of trust: Intel's PCK "
+        "certificate chain for TDX, the AWS Nitro root for Nitro</td></tr>"
+        "<tr><td class='m'>TCB SVN</td>"
+        "<td>the security version number of the platform, one byte per component. "
+        "It moves on microcode and module updates and is the field CVEs map "
+        "against</td></tr>"
+        "<tr><td class='m'>freshness</td>"
+        "<td>the response carried a challenge this run generated, so it was "
+        "produced after we asked rather than replayed</td></tr>"
+        "<tr><td class='m'>key exchange</td>"
+        "<td>what TLS group the endpoint negotiates when offered a post-quantum "
+        "hybrid</td></tr>"
+        "</table></details>"
+    )
 
     for i, vendor in enumerate(sorted(groups), start=1):
         rows = groups[vendor]
@@ -425,7 +485,7 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
                 + (f' <span class="note">{html.escape(note)}</span>' if note else "")
                 + "</td>"
                 f'<td><code class="hash">{html.escape(digest) or "&mdash;"}</code>'
-                + (f'<br><a class="recheck" href="{html.escape(src)}">re-fetch &rarr;</a>' if src else "")
+                + f"<br>{_recheck_link(src)}"
                 + "</td></tr>"
             )
         parts.append("</table>")
@@ -434,27 +494,60 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
             "and compare its SHA-256 with the hash above.</p>"
         )
 
-        changes = find_changes(rows)
-        parts.append("<h3>What was verified</h3>")
-        checks = [
-            ("quote signature",
-             "the quote verifies against the vendor's root of trust"),
-            ("TCB SVN",
-             "the security version number, which moves on microcode and module "
-             "updates and is what CVEs map against"),
-            ("freshness",
-             "the response carried a challenge this run generated, so it was "
-             "produced after we asked"),
-            ("key exchange",
-             "what TLS group the endpoint negotiates when offered a post-quantum "
-             "hybrid"),
+        # --- the full extracted surface ---
+        latest_row = usable[-1] if usable else (rows[-1] if rows else {})
+        surface = [
+            ("serving role", latest_row.get("serving_role", "")),
+            ("platform", latest_row.get("platform", "")),
+            ("tee type", latest_row.get("tee_type", "")),
+            ("E2EE protocol versions", latest_row.get("e2ee_versions", "")),
+            ("receipt keys published", _fmt_keys(latest_row.get("receipt_key_algos", ""),
+                                                latest_row.get("receipt_key_count", ""))),
+            ("E2EE keys published", _fmt_keys(latest_row.get("e2ee_key_algos", ""),
+                                             latest_row.get("e2ee_key_count", ""))),
+            ("TLS bindings", _fmt_keys(latest_row.get("tls_binding_domains", ""),
+                                      latest_row.get("tls_binding_count", ""))),
+            ("keyset expires", latest_row.get("keyset_not_after", "")),
+            ("key custody held by", latest_row.get("key_custody_provider", "")),
+            ("GPU architecture", latest_row.get("nvidia_arch", "")),
+            ("GPU evidence attached", _count_word(latest_row.get("nvidia_evidence_count", ""),
+                                                 latest_row.get("gpu_evidence_reason", ""))),
+            ("source repo", latest_row.get("repo_url", "")),
+            ("source commit", latest_row.get("repo_commit", "")),
+            ("image provenance", latest_row.get("provenance_image", "")),
+            ("measured boot events", latest_row.get("event_names", "")),
+            ("attestation protocol", latest_row.get("protocol", "")),
+            ("protocol commit", latest_row.get("protocol_commit", "")),
+            ("release", latest_row.get("release_id", "")),
+            ("schema version", latest_row.get("schema_version", "")),
+            ("declared scope", latest_row.get("scope", "")),
+            ("provider self-status", latest_row.get("operational_status", "")),
+            ("TLS binding status", latest_row.get("tls_binding_status", "")),
+            ("front door mode", latest_row.get("frontdoor_mode", "")),
+            ("serving leaf", latest_row.get("serving_leaf_sha256", "")),
+            ("operator key status", latest_row.get("operator_key_status", "")),
+            ("receipts published", latest_row.get("receipt_count", "")),
+            ("HPKE key published", latest_row.get("hpke_key_present", "")),
+            ("document format", latest_row.get("doc_format", "")),
         ]
-        parts.append("<table><tr><th>check</th><th>what it means</th></tr>")
-        for name, meaning in checks:
-            parts.append(f"<tr><td class='m'>{html.escape(name)}</td>"
-                         f"<td>{html.escape(meaning)}</td></tr>")
-        parts.append("</table>")
+        filled = [(k, v) for k, v in surface if v]
 
+        parts.append(
+            f'<h3>Measured surface <span class="note">'
+            f"{len(filled)} of {len(surface)} fields published</span></h3>"
+        )
+        if filled:
+            parts.append("<table><tr><th>field</th><th>value</th></tr>")
+            for name, value in filled:
+                parts.append(
+                    f'<tr><td class="m">{html.escape(name)}</td>'
+                    f'<td class="m">{html.escape(str(value))}</td></tr>'
+                )
+            parts.append("</table>")
+        else:
+            parts.append('<p class="empty">Nothing readable was published this run.</p>')
+
+        changes = find_changes(rows)
         parts.append("<h3>Changes</h3>")
         if changes:
             parts.append(

@@ -115,6 +115,18 @@ def parse_dstack(payload: Any) -> list[dict[str, Any]]:
     provenance = attestation.get("source_provenance") or {}
     keyset = attestation.get("workload_keyset") or {}
 
+    caps = payload.get("service_capabilities") or {}
+    receipt_keys = keyset.get("receipt_signing_keys") or []
+    e2ee_keys = keyset.get("e2ee_public_keys") or []
+    tls_keys = keyset.get("tls_public_keys") or []
+    nvidia_raw = payload.get("nvidia_payload")
+    nvidia: dict[str, Any] = {}
+    if isinstance(nvidia_raw, str) and nvidia_raw:
+        try:
+            nvidia = json.loads(nvidia_raw)
+        except json.JSONDecodeError:
+            nvidia = {}
+
     out: list[dict[str, Any]] = [
         {
             "workload": "gateway",
@@ -128,6 +140,29 @@ def parse_dstack(payload: Any) -> list[dict[str, Any]]:
             "repo_commit": str(provenance.get("repo_commit") or ""),
             "repo_url": str(provenance.get("repo_url") or ""),
             "tee_type": str(attestation.get("tee_type") or ""),
+            # --- declared capabilities ---
+            "serving_role": str(caps.get("serving") or ""),
+            "e2ee_versions": ",".join(caps.get("supported_e2ee_versions") or []),
+            # --- key material published for verification ---
+            "receipt_key_algos": ",".join(sorted({str(k.get("algo") or "") for k in receipt_keys})),
+            "receipt_key_count": str(len(receipt_keys)),
+            "e2ee_key_algos": ",".join(sorted({str(k.get("algo") or "") for k in e2ee_keys})),
+            "e2ee_key_count": str(len(e2ee_keys)),
+            "tls_binding_count": str(len(tls_keys)),
+            "tls_binding_domains": ",".join(
+                sorted({str(k.get("domain") or "") for k in tls_keys})
+            ),
+            # --- custody and GPU ---
+            "key_custody_provider": str(
+                (attestation.get("key_custody") or {}).get("provider") or ""
+            ),
+            "nvidia_arch": str(nvidia.get("arch") or ""),
+            "nvidia_evidence_count": str(len(nvidia.get("evidence_list") or [])),
+            # --- provenance of the source tree ---
+            "provenance_image_digest": str(provenance.get("image_digest") or ""),
+            "provenance_image": str(provenance.get("image_provenance") or ""),
+            # --- the measured boot event names present ---
+            "event_names": ",".join(sorted(events.keys())),
         }
     ]
 
@@ -182,6 +217,8 @@ def parse_nsm_cose(payload: Any) -> list[dict[str, Any]]:
         "doc_format": str(payload.get("format") or ""),
         "cert_spki_sha256": str(payload.get("cert_spki_sha256") or ""),
         "doc_bytes": str(size),
+        "hpke_key_present": "yes" if payload.get("hpke_public_key") else "no",
+        "cert_spki_der_bytes": str(len(str(payload.get("cert_spki_der") or ""))),
     }
     if not digest:
         out["note"] = "no attestation document in payload"
@@ -253,6 +290,15 @@ def parse_c8s(payload: Any) -> list[dict[str, Any]]:
         "operational_status": str(payload.get("operationalStatus") or ""),
         "tls_binding_status": str((tls_block.get("binding") or {}).get("status") or ""),
         "gpu_evidence_count": str(len(gpu.get("evidence") or [])) if isinstance(gpu, dict) else "0",
+        "gpu_evidence_reason": str((gpu.get("reason") or "")) if isinstance(gpu, dict) else "",
+        "frontdoor_mode": str((payload.get("frontDoor") or {}).get("receipt", {}).get("front_door_mode") or ""),
+        "frontdoor_platform": str((payload.get("frontDoor") or {}).get("receipt", {}).get("platform") or ""),
+        "serving_leaf_sha256": str((payload.get("frontDoor") or {}).get("receipt", {}).get("serving_leaf_sha256") or ""),
+        "receipt_count": str(len(payload.get("receipts") or [])),
+        "mesh_ca": str(c8s.get("meshCaSha256") or ""),
+        "operator_key_status": str((c8s.get("operatorTrust") or {}).get("activeKeySetStatus") or ""),
+        "operator_keyset_sha256": str((c8s.get("operatorTrust") or {}).get("expectedKeySetSha256") or ""),
+        "schema_version": str(payload.get("schemaVersion") or ""),
         "nonce": str(payload.get("nonce") or ""),
         "workload_digests": json.dumps(per_workload, sort_keys=True, separators=(",", ":")),
     }

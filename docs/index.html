@@ -70,6 +70,7 @@ a.recheck{font-size:.78rem;font-family:var(--mono);white-space:nowrap}
 .chip-dim{color:var(--text-faint);border-color:var(--line)}
 
 .facts{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.recheck-note{font-family:var(--mono);font-size:.78rem;color:var(--text-faint)}
 .fact{font-family:var(--mono);font-size:11px;letter-spacing:.04em;
   padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--line);
   background:var(--bg-panel-2);color:var(--text-dim)}
@@ -96,6 +97,12 @@ td.bad{color:var(--red);font-family:var(--mono)}
 tr:last-child td{border-bottom:none}
 
 .empty{color:var(--text-faint);font-size:.875rem;margin:6px 0 0}
+.legend{margin:0 0 28px;border:1px solid var(--line);border-radius:var(--radius);
+  background:var(--bg-panel)}
+.legend summary{cursor:pointer;padding:12px 18px;font-family:var(--mono);
+  font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute)}
+.legend table{margin:0;padding:0 18px 14px}
+.legend td:first-child{white-space:nowrap;color:var(--text)}
 footer{border-top:1px solid var(--line);padding-block:32px;margin-top:48px;
   color:var(--text-faint);font-size:.8rem}
 footer .container{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
@@ -109,83 +116,108 @@ footer .container{display:flex;justify-content:space-between;gap:16px;flex-wrap:
 <h1>Published attestation evidence, over time.</h1>
 <p class="lede">A scheduled crawl that records what vendors publish about their own attestation evidence, so that point-in-time observations become a time series.</p>
 <p class="note">This page observes; it does not grade. No verdict, score or ranking appears here and none is implied. Observations only, gaps visible, not a service, no uptime commitment. Every row carries the SHA-256 of the raw response so you can re-fetch the source and compare.</p>
-<p class="note">Generated <span class="mono">2026-10-08T20:40:05+00:00</span> &middot; 4 observations across 4 sources &middot; 1 run recorded.</p>
+<p class="note">Generated <span class="mono">2026-10-08T20:45:27+00:00</span> &middot; 4 observations across 4 sources &middot; 1 run recorded.</p>
 <p class="note">Each run verifies, not merely fetches: the quote signature against the vendor's root of trust, the TCB security version, whether the response was bound to a challenge this run generated, and what key exchange the endpoint negotiates. A check that could not run is shown as <em>not attempted</em> rather than as a failure, because those are different facts.</p>
+<details class="legend"><summary>What each check means</summary><table><tr><th>check</th><th>what it means</th></tr><tr><td class='m'>quote signature</td><td>the quote verifies against the vendor's root of trust: Intel's PCK certificate chain for TDX, the AWS Nitro root for Nitro</td></tr><tr><td class='m'>TCB SVN</td><td>the security version number of the platform, one byte per component. It moves on microcode and module updates and is the field CVEs map against</td></tr><tr><td class='m'>freshness</td><td>the response carried a challenge this run generated, so it was produced after we asked rather than replayed</td></tr><tr><td class='m'>key exchange</td><td>what TLS group the endpoint negotiates when offered a post-quantum hybrid</td></tr></table></details>
 <p class="kicker" style="margin-top:40px"><span class="num">01</span> confidentialai</p>
-<p class="headline first">first observed <span class="stamp">2026-10-08T20:37:59</span> &mdash; one observation, so there is nothing to compare against yet</p>
+<p class="headline first">first observed <span class="stamp">2026-10-08T20:45:14</span> &mdash; one observation, so there is nothing to compare against yet</p>
 <div class="facts"><span class="fact none">quote signature <b>not attempted</b></span><span class="fact none">tcb <b></b></span><span class="fact good">freshness <b>bound</b></span><span class="fact good">key exchange <b>X25519MLKEM768</b></span></div>
 <div class="card">
 <div class="card-head"><h2>confidentialai</h2><span class="chip chip-green">observed</span></div>
 <table><tr><th>observed</th><th>http</th><th>identity</th><th>response sha256</th></tr>
-<tr><td class="m">2026-10-08T20:37:59</td><td class="ok">200</td><td class="m">e0e5833d3aef03f117275df2c95a8d638ba248291f6f28e37c9e89b35b931ed5</td><td><code class="hash">4931e12295932b3b3dc53c4053f483a2daf33fd2db3f58760e2cfd59805f1f24</code><br><a class="recheck" href="https://api.confidential.ai/attestation?nonce=zbSwTmF67TlaSMzr_urtFIQZQNEdjaneMFr63tprc28">re-fetch &rarr;</a></td></tr>
+<tr><td class="m">2026-10-08T20:45:14</td><td class="ok">200</td><td class="m">e0e5833d3aef03f117275df2c95a8d638ba248291f6f28e37c9e89b35b931ed5</td><td><code class="hash">38607b7ae09beaeb39667641a1ebdc7069ec27faa6e8c24e3d06d34b28ddd355</code><br><a class="recheck" href="https://api.confidential.ai/attestation">endpoint &rarr;</a><br><span class="recheck-note">not re-fetchable: this response was bound to a single-use challenge, so the same URL now returns 409</span></td></tr>
 </table>
 <p class="empty">To check a row: open <em>re-fetch</em>, save the response, and compare its SHA-256 with the hash above.</p>
-<h3>What was verified</h3>
-<table><tr><th>check</th><th>what it means</th></tr>
-<tr><td class='m'>quote signature</td><td>the quote verifies against the vendor&#x27;s root of trust</td></tr>
-<tr><td class='m'>TCB SVN</td><td>the security version number, which moves on microcode and module updates and is what CVEs map against</td></tr>
-<tr><td class='m'>freshness</td><td>the response carried a challenge this run generated, so it was produced after we asked</td></tr>
-<tr><td class='m'>key exchange</td><td>what TLS group the endpoint negotiates when offered a post-quantum hybrid</td></tr>
+<h3>Measured surface <span class="note">12 of 28 fields published</span></h3>
+<table><tr><th>field</th><th>value</th></tr>
+<tr><td class="m">platform</td><td class="m">confidential-ai-c8s</td></tr>
+<tr><td class="m">attestation protocol</td><td class="m">c8s/attest-pq/v1+xwing</td></tr>
+<tr><td class="m">protocol commit</td><td class="m">466ce79</td></tr>
+<tr><td class="m">release</td><td class="m">v0.13.28-rc.2</td></tr>
+<tr><td class="m">schema version</td><td class="m">2</td></tr>
+<tr><td class="m">declared scope</td><td class="m">launch-or-admission-only</td></tr>
+<tr><td class="m">provider self-status</td><td class="m">not-verified</td></tr>
+<tr><td class="m">TLS binding status</td><td class="m">requires-attest-lb</td></tr>
+<tr><td class="m">front door mode</td><td class="m">acme</td></tr>
+<tr><td class="m">serving leaf</td><td class="m">4GKzNHgFCtd7ZBCdVSG3vFt4HvIMk5ZGtLTNWWcT-nk</td></tr>
+<tr><td class="m">operator key status</td><td class="m">requires-attested-cds-read</td></tr>
+<tr><td class="m">receipts published</td><td class="m">6</td></tr>
 </table>
 <h3>Changes</h3>
 <p class="empty">No change recorded.</p>
 <p class="empty">Source: <span class="mono">https://api.confidential.ai/attestation</span></p>
 </div>
 <p class="kicker" style="margin-top:40px"><span class="num">02</span> phala</p>
-<p class="headline first">first observed <span class="stamp">2026-10-08T20:37:59</span> &mdash; one observation, so there is nothing to compare against yet</p>
+<p class="headline first">first observed <span class="stamp">2026-10-08T20:45:14</span> &mdash; one observation, so there is nothing to compare against yet</p>
 <div class="facts"><span class="fact good">quote signature <b>verified</b></span><span class="fact good">tcb <b>0b01050000000000</b></span><span class="fact bad">freshness <b>not bound</b></span><span class="fact good">key exchange <b>X25519MLKEM768</b></span></div>
 <div class="card">
 <div class="card-head"><h2>phala</h2><span class="chip chip-green">observed</span></div>
 <table><tr><th>observed</th><th>http</th><th>identity</th><th>response sha256</th></tr>
-<tr><td class="m">2026-10-08T20:37:59</td><td class="ok">200</td><td class="m">0637b3d506c80c0328c84697c290f5fb7eef811c8d022124e04ee9b0f5f99567</td><td><code class="hash">291326ecd58ab4b87c741c5f61ebd7d617c191a31f8edcd5cd83291445b922c5</code><br><a class="recheck" href="https://inference.phala.com/v1/aci/attestation?nonce=4c3d81185a548bf59a17b210effa269017af50071b2405a8f5fe330f0bb12af5">re-fetch &rarr;</a></td></tr>
+<tr><td class="m">2026-10-08T20:45:14</td><td class="ok">200</td><td class="m">0637b3d506c80c0328c84697c290f5fb7eef811c8d022124e04ee9b0f5f99567</td><td><code class="hash">a6aa8161414de81711539314ab9c3a2eb0c22f883e628d22ea39d1e9a73fc7d6</code><br><a class="recheck" href="https://inference.phala.com/v1/aci/attestation">endpoint &rarr;</a><br><span class="recheck-note">not re-fetchable: this response was bound to a single-use challenge, so the same URL now returns 409</span></td></tr>
 </table>
 <p class="empty">To check a row: open <em>re-fetch</em>, save the response, and compare its SHA-256 with the hash above.</p>
-<h3>What was verified</h3>
-<table><tr><th>check</th><th>what it means</th></tr>
-<tr><td class='m'>quote signature</td><td>the quote verifies against the vendor&#x27;s root of trust</td></tr>
-<tr><td class='m'>TCB SVN</td><td>the security version number, which moves on microcode and module updates and is what CVEs map against</td></tr>
-<tr><td class='m'>freshness</td><td>the response carried a challenge this run generated, so it was produced after we asked</td></tr>
-<tr><td class='m'>key exchange</td><td>what TLS group the endpoint negotiates when offered a post-quantum hybrid</td></tr>
+<h3>Measured surface <span class="note">12 of 28 fields published</span></h3>
+<table><tr><th>field</th><th>value</th></tr>
+<tr><td class="m">serving role</td><td class="m">aggregator</td></tr>
+<tr><td class="m">platform</td><td class="m">tdx</td></tr>
+<tr><td class="m">tee type</td><td class="m">tdx</td></tr>
+<tr><td class="m">E2EE protocol versions</td><td class="m">2</td></tr>
+<tr><td class="m">receipt keys published</td><td class="m">1: ed25519</td></tr>
+<tr><td class="m">E2EE keys published</td><td class="m">2: secp256k1-aes-256-gcm-hkdf-sha256,x25519-aes-256-gcm-hkdf-sha256</td></tr>
+<tr><td class="m">TLS bindings</td><td class="m">4: api.redpill.ai,inference.phala.com,openrouter.phala.com,tee.redpill.ai</td></tr>
+<tr><td class="m">keyset expires</td><td class="m">1792250755</td></tr>
+<tr><td class="m">GPU evidence attached</td><td class="m">none published</td></tr>
+<tr><td class="m">source repo</td><td class="m">https://github.com/Dstack-TEE/private-ai-gateway.git</td></tr>
+<tr><td class="m">source commit</td><td class="m">8d0a666a2418898a8c823a9af49a634edd122a64</td></tr>
+<tr><td class="m">measured boot events</td><td class="m">app-id,boot-mr-done,compose-hash,instance-id,key-provider,mr-kms,os-image-hash,storage-fs,system-preparing,system-ready</td></tr>
 </table>
 <h3>Changes</h3>
 <p class="empty">No change recorded.</p>
 <p class="empty">Source: <span class="mono">https://inference.phala.com/v1/aci/attestation</span></p>
 </div>
 <p class="kicker" style="margin-top:40px"><span class="num">03</span> ppq</p>
-<p class="headline first">first observed <span class="stamp">2026-10-08T20:37:59</span> &mdash; one observation, so there is nothing to compare against yet</p>
+<p class="headline first">first observed <span class="stamp">2026-10-08T20:45:14</span> &mdash; one observation, so there is nothing to compare against yet</p>
 <div class="facts"><span class="fact good">quote signature <b>verified</b></span><span class="fact none">tcb <b></b></span><span class="fact none">freshness <b>not attempted</b></span><span class="fact good">key exchange <b>X25519MLKEM768</b></span></div>
 <div class="card">
 <div class="card-head"><h2>ppq</h2><span class="chip chip-green">observed</span></div>
 <table><tr><th>observed</th><th>http</th><th>identity</th><th>response sha256</th></tr>
-<tr><td class="m">2026-10-08T20:37:59</td><td class="ok">200</td><td class="m">262d98157f4f2b0ff913077b61184d5fef2ad184dbea7108e79a9ec49392284c</td><td><code class="hash">91c5651c5f1ea31d0b17bc71062e793db4b051b028c58d59248102383ec0a948</code><br><a class="recheck" href="https://api.ppq.ai/attestation">re-fetch &rarr;</a></td></tr>
+<tr><td class="m">2026-10-08T20:45:14</td><td class="ok">200</td><td class="m">9d08d8c976462821254863e4c0257603814c4dbf44c0bb7a0d61f855560d7e73</td><td><code class="hash">4472e7035a3bffc6b458e34a01d05cf83a187373993b1980163e54bbbbb3af50</code><br><a class="recheck" href="https://api.ppq.ai/attestation">re-fetch &rarr;</a></td></tr>
 </table>
 <p class="empty">To check a row: open <em>re-fetch</em>, save the response, and compare its SHA-256 with the hash above.</p>
-<h3>What was verified</h3>
-<table><tr><th>check</th><th>what it means</th></tr>
-<tr><td class='m'>quote signature</td><td>the quote verifies against the vendor&#x27;s root of trust</td></tr>
-<tr><td class='m'>TCB SVN</td><td>the security version number, which moves on microcode and module updates and is what CVEs map against</td></tr>
-<tr><td class='m'>freshness</td><td>the response carried a challenge this run generated, so it was produced after we asked</td></tr>
-<tr><td class='m'>key exchange</td><td>what TLS group the endpoint negotiates when offered a post-quantum hybrid</td></tr>
+<h3>Measured surface <span class="note">3 of 28 fields published</span></h3>
+<table><tr><th>field</th><th>value</th></tr>
+<tr><td class="m">platform</td><td class="m">aws-nitro</td></tr>
+<tr><td class="m">HPKE key published</td><td class="m">yes</td></tr>
+<tr><td class="m">document format</td><td class="m">nsm-cose-sign1</td></tr>
 </table>
 <h3>Changes</h3>
 <p class="empty">No change recorded.</p>
 <p class="empty">Source: <span class="mono">https://api.ppq.ai/attestation</span></p>
 </div>
 <p class="kicker" style="margin-top:40px"><span class="num">04</span> redpill</p>
-<p class="headline first">first observed <span class="stamp">2026-10-08T20:37:59</span> &mdash; one observation, so there is nothing to compare against yet</p>
+<p class="headline first">first observed <span class="stamp">2026-10-08T20:45:14</span> &mdash; one observation, so there is nothing to compare against yet</p>
 <div class="facts"><span class="fact good">quote signature <b>verified</b></span><span class="fact good">tcb <b>0b01050000000000</b></span><span class="fact good">freshness <b>bound</b></span><span class="fact good">key exchange <b>X25519MLKEM768</b></span></div>
 <div class="card">
 <div class="card-head"><h2>redpill</h2><span class="chip chip-green">observed</span></div>
 <table><tr><th>observed</th><th>http</th><th>identity</th><th>response sha256</th></tr>
-<tr><td class="m">2026-10-08T20:37:59</td><td class="ok">200</td><td class="m">0637b3d506c80c0328c84697c290f5fb7eef811c8d022124e04ee9b0f5f99567</td><td><code class="hash">ceb93b10ee1a37c6a2d6356f02f013758c47cccffaaf7662b5f06a984f666ab7</code><br><a class="recheck" href="https://api.redpill.ai/v1/attestation/report?nonce=226ca2ad4ebbfaf04dfde38fac8abfc8d63fe432d34f63a0d42855f7c7fee286">re-fetch &rarr;</a></td></tr>
+<tr><td class="m">2026-10-08T20:45:14</td><td class="ok">200</td><td class="m">0637b3d506c80c0328c84697c290f5fb7eef811c8d022124e04ee9b0f5f99567</td><td><code class="hash">aef5ceef35a766bc073ff84ded50cce346f68c09da8a4ca2a44e98b4446e9350</code><br><a class="recheck" href="https://api.redpill.ai/v1/attestation/report">endpoint &rarr;</a><br><span class="recheck-note">not re-fetchable: this response was bound to a single-use challenge, so the same URL now returns 409</span></td></tr>
 </table>
 <p class="empty">To check a row: open <em>re-fetch</em>, save the response, and compare its SHA-256 with the hash above.</p>
-<h3>What was verified</h3>
-<table><tr><th>check</th><th>what it means</th></tr>
-<tr><td class='m'>quote signature</td><td>the quote verifies against the vendor&#x27;s root of trust</td></tr>
-<tr><td class='m'>TCB SVN</td><td>the security version number, which moves on microcode and module updates and is what CVEs map against</td></tr>
-<tr><td class='m'>freshness</td><td>the response carried a challenge this run generated, so it was produced after we asked</td></tr>
-<tr><td class='m'>key exchange</td><td>what TLS group the endpoint negotiates when offered a post-quantum hybrid</td></tr>
+<h3>Measured surface <span class="note">13 of 28 fields published</span></h3>
+<table><tr><th>field</th><th>value</th></tr>
+<tr><td class="m">serving role</td><td class="m">aggregator</td></tr>
+<tr><td class="m">platform</td><td class="m">tdx</td></tr>
+<tr><td class="m">tee type</td><td class="m">tdx</td></tr>
+<tr><td class="m">E2EE protocol versions</td><td class="m">2</td></tr>
+<tr><td class="m">receipt keys published</td><td class="m">1: ed25519</td></tr>
+<tr><td class="m">E2EE keys published</td><td class="m">2: secp256k1-aes-256-gcm-hkdf-sha256,x25519-aes-256-gcm-hkdf-sha256</td></tr>
+<tr><td class="m">TLS bindings</td><td class="m">4: api.redpill.ai,inference.phala.com,openrouter.phala.com,tee.redpill.ai</td></tr>
+<tr><td class="m">keyset expires</td><td class="m">1792250755</td></tr>
+<tr><td class="m">GPU architecture</td><td class="m">HOPPER</td></tr>
+<tr><td class="m">GPU evidence attached</td><td class="m">none published</td></tr>
+<tr><td class="m">source repo</td><td class="m">https://github.com/Dstack-TEE/private-ai-gateway.git</td></tr>
+<tr><td class="m">source commit</td><td class="m">8d0a666a2418898a8c823a9af49a634edd122a64</td></tr>
+<tr><td class="m">measured boot events</td><td class="m">app-id,boot-mr-done,compose-hash,instance-id,key-provider,mr-kms,os-image-hash,storage-fs,system-preparing,system-ready</td></tr>
 </table>
 <h3>Changes</h3>
 <p class="empty">No change recorded.</p>
