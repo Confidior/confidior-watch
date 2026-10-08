@@ -188,11 +188,48 @@ def test_nonce_is_stripped_from_the_displayed_source():
 
 
 def test_full_response_hash_is_shown_not_truncated():
-    """A truncated hash cannot be compared to anything. It is decoration."""
+    """A truncated hash cannot be compared to anything. It is decoration.
+
+    The hash lives in the collapsed body now, keyed by its field name, and it
+    is printed whole.
+    """
     rows = [rec("v", "t1", measurement="m", response_sha256="a" * 64)]
     html = render(rows, generated_at="t")
+    assert "response_sha256" in html
     assert "a" * 64 in html
-    assert "&hellip;" not in html.split("response sha256")[1][:400]
+    assert "a" * 63 + "&hellip;" not in html
+
+
+def test_every_observation_is_collapsible():
+    """One <details> per observation, so none is dropped from the page."""
+    rows = [rec("v", f"2026-10-0{i}T06:00:00+00:00", measurement=f"m{i}")
+            for i in range(1, 4)]
+    html = render(rows, generated_at="t")
+    assert html.count('<details class="obs">') == 3
+
+
+def test_no_observation_is_silently_capped():
+    """The page used to print only the last 12 rows. All of them belong."""
+    rows = [rec("v", f"2026-10-{i:02d}T06:00:00+00:00", measurement=f"m{i}")
+            for i in range(1, 20)]
+    html = render(rows, generated_at="t")
+    assert html.count('<details class="obs">') == 19
+
+
+def test_collapsible_body_carries_every_field_recorded():
+    """All its details, not a curated subset: a field the run stored is a fact
+    the page must be able to show."""
+    rows = [rec("v", "t1", measurement="m", some_obscure_field="kept")]
+    html = render(rows, generated_at="t")
+    assert "some_obscure_field" in html
+    assert "kept" in html
+
+
+def test_newest_observation_is_first_on_the_page():
+    rows = [rec("v", "2026-10-01T06:00:00+00:00", measurement="OLD"),
+            rec("v", "2026-10-09T06:00:00+00:00", measurement="NEW")]
+    html = render(rows, generated_at="t")
+    assert html.index("NEW") < html.index("OLD")
 
 
 def test_each_row_links_to_the_source_so_a_reader_can_recheck():

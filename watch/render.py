@@ -219,6 +219,28 @@ tr:last-child td{{border-bottom:none}}
 .vendor-sub{{font-family:var(--mono);font-size:11px;letter-spacing:.05em;
   text-transform:uppercase;color:var(--text-faint)}}
 
+/* Every observation is collapsible, and the collapsed line already carries the
+   facts a reader scans for. Open one to see every field the run recorded.
+   Nothing is hidden: the detail is closed, not absent. */
+.obs{{border:1px solid var(--line);border-radius:var(--radius-sm);
+  background:var(--bg-panel-2);margin:0 0 8px}}
+.obs summary{{cursor:pointer;padding:9px 12px;display:flex;gap:12px;
+  align-items:baseline;flex-wrap:wrap;font-family:var(--mono);font-size:.78rem;
+  color:var(--text-dim);list-style:none}}
+.obs summary::-webkit-details-marker{{display:none}}
+.obs summary::before{{content:"\\25B8";color:var(--text-faint)}}
+.obs[open] summary::before{{content:"\\25BE"}}
+.obs summary:hover{{color:var(--text)}}
+.obs summary .when{{color:var(--text)}}
+.obs summary .ident{{color:var(--text-mute);word-break:break-all}}
+.obs summary .end{{margin-left:auto;display:flex;gap:10px;align-items:baseline}}
+.obs .body{{padding:2px 12px 12px;border-top:1px solid var(--line)}}
+.obs td{{padding:4px 12px 4px 0;font-size:.78rem}}
+.obs .k{{font-family:var(--mono);color:var(--text-mute);white-space:nowrap}}
+.obs .v{{font-family:var(--mono);color:var(--text);word-break:break-all;
+  user-select:all;cursor:text}}
+.obs .v.faint{{color:var(--text-faint)}}
+
 /* A summary strip, so the page opens with the state of the register rather
    than with prose. Same shape as the dotcom provider hero. */
 .summary{{display:flex;flex-wrap:wrap;gap:0;margin:0 0 26px;
@@ -541,30 +563,55 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
 
             parts.append('<div class="facts">' + "".join(facts) + "</div>")
 
+        # Each observation is collapsible, newest first, and opens onto every
+        # field the run recorded for it. The log stores 77 fields per
+        # observation and the page used to print a curated handful, capped at
+        # the last 12 rows, so history and detail were both lost on the page.
+        # The collapsed line carries the facts a reader scans for (when, what
+        # it saw, whether it is readable); the body carries the rest.
         parts.append(
-            "<table><tr><th>observed</th><th>http</th><th>identity</th>"
-            "<th>response sha256</th></tr>"
+            f'<h3>Observations <span class="note">{len(rows)} recorded, '
+            "newest first. Open one to see every field that run recorded.</span></h3>"
         )
-        for row in rows[-12:]:
+        for row in reversed(rows):
             ident = row.get("measurement") or row.get("keyset_digest") or ""
             digest = row.get("response_sha256") or ""
-            cls = "ok" if row.get("http_status") == 200 and ident else "bad"
+            status = row.get("http_status", 0)
+            ok = status == 200 and bool(ident)
+            cls = "ok" if ok else "bad"
             note = row.get("note") or ""
             src = row.get("source_url") or ""
-            # The hash is shown whole and selectable, and the row links to the
-            # endpoint so a reader can re-fetch it and compare. A truncated hash
-            # is a texture, not evidence.
+            parts.append("<details class=\"obs\">")
             parts.append(
-                f'<tr><td class="m">{html.escape(row.get("observed_at", "")[:19])}</td>'
-                f'<td class="{cls}">{row.get("http_status", 0)}</td>'
-                f'<td class="m">{html.escape(ident) if ident else "&mdash;"}'
-                + (f' <span class="note">{html.escape(note)}</span>' if note else "")
-                + "</td>"
-                f'<td><code class="hash">{html.escape(digest) or "&mdash;"}</code>'
-                + f"<br>{_recheck_link(src)}"
-                + "</td></tr>"
+                '<summary>'
+                f'<span class="when">{html.escape(row.get("observed_at", "")[:19])}</span>'
+                f'<span class="{cls}">http {html.escape(str(status))}</span>'
+                f'<span class="ident">{html.escape(ident[:24]) if ident else "no identity"}</span>'
+                '<span class="end">'
+                + (f'<span class="chip chip-red">{html.escape(note)}</span>' if note else "")
+                + "</span></summary>"
             )
-        parts.append("</table>")
+            parts.append('<div class="body">')
+            if src:
+                parts.append(
+                    f'<p class="note">source <span class="mono">'
+                    f"{html.escape(strip_query(src))}</span> {_recheck_link(src)}</p>"
+                )
+            parts.append("<table>")
+            for key in sorted(row):
+                value = row.get(key)
+                if value is None or value == "":
+                    value = "&mdash;"
+                    vcls = "v faint"
+                else:
+                    value = html.escape(str(value))
+                    vcls = "v"
+                parts.append(
+                    f'<tr><td class="k">{html.escape(key)}</td>'
+                    f'<td class="{vcls}">{value}</td></tr>'
+                )
+            parts.append("</table>")
+            parts.append("</div></details>")
         parts.append(
             '<p class="empty">To check a row: open <em>re-fetch</em>, save the response, '
             "and compare its SHA-256 with the hash above.</p>"
