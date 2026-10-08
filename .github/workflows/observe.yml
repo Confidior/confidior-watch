@@ -1,0 +1,132 @@
+name: Continuity log
+
+# Records what vendors publish about their own attestation evidence, weekly.
+#
+# Why weekly rather than daily: measurement changes are rare events, so weekly
+# loses almost nothing. See docs/the internal strategy note section 6.
+#
+# Self-sustaining: GitHub disables scheduled workflows after 60 days without
+# repository activity. This job commits every run, which counts as activity, so
+# the schedule outlives a repository that would otherwise go quiet.
+
+on:
+  schedule:
+    # Mondays at 06:17 UTC. Off the hour: the shared runners are busy on :00.
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write   # to commit the observation log
+  issues: write     # to open an issue on itself after repeated source failure
+
+concurrency:
+  group: continuity-log
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Test
+        run: |
+          pip install pytest
+          python -m pytest tests/ -q
+
+      - name: Observe
+        id: observe
+        run: |
+          python -m watch.collector --log observations.jsonl --anchor
+
+      - name: Detect sources that returned nothing usable
+        id: check
+        run: |
+          python - <<'PY'
+          import json, os, pathlib
+          log = pathlib.Path("observations.jsonl")
+          lines = [json.loads(l) for l in log.read_text().splitlines() if l.strip()]
+          today = lines[-1]["observed_at"][:10]
+          todays = [l for l in lines if l["observed_at"][:10] == today and l["vendor"] != "__heartbeat__"]
+          ok = [l for l in todays if l["http_status"] == 200 and (l["measurement"] or l["keyset_digest"])]
+          healthy = len(ok) > 0
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"healthy={'true' if healthy else 'false'}\n")
+              f.write(f"ok_count={len(ok)}\n")
+              f.write(f"total={len(todays)}\n")
+          print(f"usable observations: {len(ok)}/{len(todays)}")
+          PY
+
+      # Failures surface themselves rather than requiring the owner to poll.
+      # One bad week is normal (a vendor is redeploying). Only open an issue when
+      # *no* source returned usable evidence, which means the job is broken or
+      # every source has moved -- both need a human.
+      - name: Open an issue if nothing was readable
+        if: steps.check.outputs.healthy == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `Continuity log: no source returned usable evidence`;
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'source-rot',
+            });
+            if (existing.length) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing[0].number,
+                body: `Still failing on ${new Date().toISOString().slice(0,10)}. ` +
+                      `Usable observations: ${{ steps.check.outputs.ok_count }}/${{ steps.check.outputs.total }}.`,
+              });
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              title,
+              labels: ['source-rot'],
+              body: [
+                'The scheduled crawl ran but **no source returned usable evidence**.',
+                '',
+                'A gap in the timeline is itself a finding, and this issue is that gap',
+                'made visible. Likely causes: a source moved, changed shape, or began',
+                'requiring authentication.',
+                '',
+                'The observation with its HTTP status is still in `observations.jsonl` —',
+                'the log records the failure rather than hiding it. Check the latest',
+                '`__heartbeat__` line to confirm the job ran at all.',
+                '',
+                `Usable: ${{ steps.check.outputs.ok_count }}/${{ steps.check.outputs.total }}`,
+              ].join('\n'),
+            });
+
+      - name: Commit the observation
+        run: |
+          git config user.name  "confidior-watch"
+          git config user.email "watch@users.noreply.github.com"
+          git add observations.jsonl
+          if git diff --staged --quiet; then
+            echo "No change recorded this run (the log is append-only, so this means nothing was written)."
+            exit 0
+          fi
+          git commit -m "observe: $(date -u +%Y-%m-%d)"
+          git push
+
+      - name: Render the timeline page
+        run: python -m watch.render --log observations.jsonl --out docs/index.html
+
+      - name: Commit the page
+        run: |
+          git config user.name  "confidior-watch"
+          git config user.email "watch@users.noreply.github.com"
+          git add docs/index.html
+          git diff --staged --quiet || git commit -m "page: $(date -u +%Y-%m-%d)"
+          git push
