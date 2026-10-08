@@ -82,12 +82,26 @@ FIELD_LABELS = {
 UNREADABLE_DATE = "2026-10-09"
 
 #: Copied from the site repository's built CSS ``:root`` (dark theme).
+#: The palette is not invented here. It is the engine's own, taken from
+#: src/export/badge.py, which docs/the internal design note names as the source of
+#: truth for the visual language. This page previously carried a slightly
+#: different accent and surface ramp, which meant the log and the badge and the
+#: site disagreed about what green and red mean. They do not disagree now.
+#:
+#: Divergence that remains, and why: this page uses a lighter text ramp
+#: (#e5e7eb / #9ca3af / #6b7280 are the engine's; the middle and faint values
+#: here match those exactly). Anything not sourced from badge.py is marked.
 TOKENS = """
-  --bg:#0b0d14; --bg-panel:#161822; --bg-panel-2:#1b1e2a; --bg-input:#10131d;
-  --text:#e6e9f2; --text-dim:#a9b0c3; --text-mute:#8b93a7; --text-faint:#6b7387;
-  --accent:#7b8cff; --accent-strong:#96a6ff; --accent-dim:rgba(123,140,255,.12);
-  --green:#4dc729; --green-dim:rgba(77,199,41,.12);
-  --red:#df3c30; --amber:#ffb224;
+  /* from src/export/badge.py */
+  --green:#4dc729; --red:#df3c30; --amber:#f59e0b; --blue:#3b82f6;
+  --neutral:#999999;
+  --bg-panel:#161822; --bg-panel-2:#1e2030;
+  --text:#e5e7eb; --text-dim:#9ca3af; --text-faint:#6b7280;
+  /* page-local: surface ramp and states the badge does not define */
+  --bg:#0f1117; --bg-input:#111318;
+  --bg-grad:linear-gradient(180deg,#161822 0%,#1a1d2a 100%);
+  --accent:var(--blue); --accent-dim:rgba(59,130,246,.12);
+  --green-dim:rgba(77,199,41,.12);
   --line:rgba(255,255,255,.08); --line-strong:rgba(255,255,255,.14);
   --mono:ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
   --sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
@@ -146,9 +160,9 @@ a.recheck{{font-size:.78rem;font-family:var(--mono);white-space:nowrap}}
   letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;
   border-radius:999px;border:1px solid var(--line-strong);color:var(--text-mute);
   white-space:nowrap}}
-.chip-green{{color:var(--green);border-color:#4dc72966;background:var(--green-dim)}}
-.chip-amber{{color:var(--amber);border-color:#ffb22466;background:rgba(255,178,36,.1)}}
-.chip-red{{color:var(--red);border-color:#df3c3066;background:rgba(223,60,48,.1)}}
+.chip-green{{color:var(--green);border-color:rgba(77,199,41,.4);background:var(--green-dim)}}
+.chip-amber{{color:var(--amber);border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.1)}}
+.chip-red{{color:var(--red);border-color:rgba(223,60,48,.4);background:rgba(223,60,48,.1)}}
 .chip-dim{{color:var(--text-faint);border-color:var(--line)}}
 
 .facts{{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}}
@@ -157,8 +171,8 @@ a.recheck{{font-size:.78rem;font-family:var(--mono);white-space:nowrap}}
   padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--line);
   background:var(--bg-panel-2);color:var(--text-dim)}}
 .fact b{{color:var(--text);font-weight:500}}
-.fact.good{{border-color:#4dc72944}} .fact.good b{{color:var(--green)}}
-.fact.bad{{border-color:#df3c3044}} .fact.bad b{{color:var(--red)}}
+.fact.good{{border-color:rgba(77,199,41,.27)}} .fact.good b{{color:var(--green)}}
+.fact.bad{{border-color:rgba(223,60,48,.27)}} .fact.bad b{{color:var(--red)}}
 .fact.none{{border-color:var(--line)}} .fact.none b{{color:var(--text-faint)}}
 
 .headline{{font-family:var(--mono);font-size:.9rem;color:var(--text-dim);
@@ -182,10 +196,10 @@ tr:last-child td{{border-bottom:none}}
 .gatebar{{margin:6px 0 10px;display:flex;gap:6px;flex-wrap:wrap}}
 .g{{font-family:var(--mono);font-size:.72rem;padding:2px 7px;border-radius:3px;
    border:1px solid var(--line);white-space:nowrap}}
-.g-good{{border-color:var(--text);color:var(--text)}}
-.g-warning{{color:var(--text-faint)}}
-.g-bad{{border-color:#b3261e;color:#b3261e}}
-.g-unverifiable{{color:var(--text-faint);opacity:.8}}
+.g-good{{border-color:rgba(77,199,41,.5);color:var(--green)}}
+.g-warning{{color:var(--amber)}}
+.g-bad{{border-color:var(--red);color:var(--red)}}
+.g-unverifiable{{color:var(--neutral);opacity:.85}}
 .g-na{{color:var(--text-faint);opacity:.6}}
 .legend{{margin:0 0 28px;border:1px solid var(--line);border-radius:var(--radius);
   background:var(--bg-panel)}}
@@ -193,9 +207,35 @@ tr:last-child td{{border-bottom:none}}
   font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-mute)}}
 .legend table{{margin:0;padding:0 18px 14px}}
 .legend td:first-child{{white-space:nowrap;color:var(--text)}}
+/* Provider cards read as panels, matching the engine web UI, so the log looks
+   like the same product rather than a side project. */
+.vendor{{border:1px solid var(--line);border-radius:var(--radius);
+  background:var(--bg-panel);padding:22px 24px;margin:0 0 22px}}
+.vendor:hover{{border-color:var(--line-strong)}}
+.vendor-head{{display:flex;align-items:baseline;justify-content:space-between;
+  gap:14px;flex-wrap:wrap;margin:0 0 4px}}
+.vendor-name{{font-family:var(--mono);font-size:1rem;letter-spacing:-.01em;
+  color:var(--text);margin:0;font-weight:600}}
+.vendor-sub{{font-family:var(--mono);font-size:11px;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--text-faint)}}
+
+/* A summary strip, so the page opens with the state of the register rather
+   than with prose. Same shape as the dotcom provider hero. */
+.summary{{display:flex;flex-wrap:wrap;gap:0;margin:0 0 26px;
+  border:1px solid var(--line);border-radius:var(--radius);
+  background:var(--bg-panel);overflow:hidden}}
+.summary div{{flex:1 1 120px;padding:14px 18px;border-right:1px solid var(--line)}}
+.summary div:last-child{{border-right:none}}
+.summary .k{{font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--text-faint);display:block;margin-bottom:5px}}
+.summary .v{{font-family:var(--mono);font-size:1.35rem;color:var(--text);
+  line-height:1.1;font-weight:600}}
+.summary .v small{{font-size:.7rem;color:var(--text-dim);font-weight:400}}
+
 footer{{border-top:1px solid var(--line);padding-block:32px;margin-top:48px;
   color:var(--text-faint);font-size:.8rem}}
 footer .container{{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}}
+footer a{{color:var(--text-dim)}}
 """
 
 
@@ -374,6 +414,27 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
         "are different facts.</p>",
     ]
 
+    # Open with the state of the register, not with prose. Same shape as the
+    # dotcom provider hero: a row of counts a reader can take in at a glance.
+    verified = sum(
+        1 for v in groups.values() for r in v if r.get("signature_valid") == "true"
+    )
+    readable = sum(
+        1 for v in groups.values() for r in v if r.get("http_status") == 200
+    )
+    unreadable = observed - readable
+    parts.append(
+        '<div class="summary">'
+        f'<div><span class="k">sources</span><span class="v">{len(groups)}</span></div>'
+        f'<div><span class="k">observations</span><span class="v">{observed}</span></div>'
+        f'<div><span class="k">quote verified</span><span class="v">{verified}'
+        f'<small> of {readable} readable</small></span></div>'
+        f'<div><span class="k">not readable</span><span class="v">{unreadable}'
+        f'<small> anonymous</small></span></div>'
+        f'<div><span class="k">runs recorded</span><span class="v">{runs}</span></div>'
+        "</div>"
+    )
+
     if not groups:
         parts.append(
             '<div class="card"><p><strong>No observations yet.</strong> The first '
@@ -407,8 +468,20 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
         last = rows[-1]
         healthy = bool(usable) and bool(usable[-1].get("measurement"))
 
-        parts.append(f'<p class="kicker" style="margin-top:40px">'
-                     f'<span class="num">{i:02d}</span> {html.escape(vendor)}</p>')
+        # Each vendor is a panel with a header, matching the engine web UI so
+        # the log reads as the same product rather than a side project.
+        platform = str((usable[-1] if usable else rows[-1]).get("platform") or "")
+        parts.append('<section class="vendor">')
+        parts.append(
+            '<div class="vendor-head">'
+            f'<h2 class="vendor-name">{html.escape(vendor)}</h2>'
+            '<span class="vendor-sub">'
+            f'<span class="chip {"chip-green" if healthy else "chip-red"}">'
+            f'{"observed" if healthy else "unreadable"}</span> '
+            f'{i:02d}'
+            + (f" &middot; {html.escape(platform)}" if platform else "")
+            + "</span></div>"
+        )
 
         if since and usable_count >= 2:
             parts.append(
@@ -468,13 +541,6 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
 
             parts.append('<div class="facts">' + "".join(facts) + "</div>")
 
-        parts.append('<div class="card">')
-        parts.append(
-            '<div class="card-head">'
-            f'<h2>{html.escape(vendor)}</h2>'
-            f'<span class="chip {"chip-green" if healthy else "chip-red"}">'
-            f'{"observed" if healthy else "unreadable"}</span></div>'
-        )
         parts.append(
             "<table><tr><th>observed</th><th>http</th><th>identity</th>"
             "<th>response sha256</th></tr>"
@@ -526,7 +592,9 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
             if counts.get(status)
         )
         parts.append(
-            f'<h3>Gates <span class="note">{len(gates)} scored separately</span></h3>'
+            f'<h3>Checks run <span class="note">{len(gates)} independent checks, '
+            "each with its own result and its own evidence strength. This is a "
+            "record of what was checked, not a rating.</span></h3>"
         )
         parts.append(f'<p class="gatebar">{headline}</p>')
         parts.append("<table><tr><th>gate</th><th>status</th><th>evidence</th></tr>")
@@ -613,7 +681,7 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
             '<p class="empty">Source: '
             f'<span class="mono">{html.escape(strip_query(last.get("source_url", "")))}</span></p>'
         )
-        parts.append("</div>")
+        parts.append("</section>")
 
     # --- what is not readable anonymously ---
     # This is the most useful thing the crawl found, and it is a fact about

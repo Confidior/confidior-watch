@@ -111,12 +111,51 @@ def test_page_states_no_uptime_commitment():
     assert "no uptime commitment" in html
 
 
-def test_page_uses_the_dotcom_design_tokens():
-    """Same brand as confidior.com, not a separate project."""
+def test_page_colours_come_from_the_engine_badge():
+    """Same brand as the badge and the site, not a separate project.
+
+    The expected values are read from src/export/badge.py, which
+    docs/the internal design note names as the source of truth for the visual
+    language. An earlier version of this test hardcoded its own copies, so it
+    passed while the page drifted to a different accent and surface ramp. A
+    test that restates the values it is meant to check cannot catch drift.
+    """
+    badge = _engine_badge_colours()
+    if not badge:
+        import pytest
+
+        pytest.skip("engine badge.py not importable from this checkout")
+
     html = render(ROWS, generated_at="t")
-    for token in ["--bg:#0b0d14", "--bg-panel:#161822", "--accent:#7b8cff",
-                  "--green:#4dc729", "--red:#df3c30", "--container:1120px"]:
-        assert token in html, f"missing design token {token}"
+    for name, hex_value in badge.items():
+        assert f"--{name}:{hex_value}" in html, (
+            f"page token --{name} does not match badge.py ({hex_value})"
+        )
+    # Sourced from badge.py's own panel/text ramp.
+    assert "--bg-panel:#161822" in html
+    assert "--container:1120px" in html
+
+
+def _engine_badge_colours() -> dict[str, str]:
+    """Read the canonical colours out of the engine's badge module.
+
+    Parsed as text rather than imported: the watch repo must not take a hard
+    dependency on the engine, and it must still run when the engine is absent.
+    """
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2] / "confidior-engine" / "src" / "export" / "badge.py"
+    if not root.exists():
+        return {}
+    text = root.read_text()
+    wanted = {"green": "_GREEN", "red": "_RED", "amber": "_AMBER", "blue": "_BLUE"}
+    found: dict[str, str] = {}
+    for token, const in wanted.items():
+        m = re.search(rf'^{const}\s*=\s*"(#[0-9a-fA-F]{{6}})"', text, re.M)
+        if m:
+            found[token] = m.group(1).lower()
+    return found
 
 
 def test_body_text_uses_sans_and_only_machine_values_use_mono():

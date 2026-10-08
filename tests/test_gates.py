@@ -125,6 +125,6 @@ def test_page_shows_the_gate_grid():
         gpu_count="0", nvidia_evidence_count="0",
     )
     html = render([row], generated_at="t")
-    assert "Gates" in html
-    assert "scored separately" in html
+    assert "Checks run" in html
+    assert "not a rating" in html
     assert "GPU evidence consistency" in html
