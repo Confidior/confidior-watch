@@ -98,6 +98,7 @@ TOKENS = """
   --bg-panel:#161822; --bg-panel-2:#1e2030;
   --text:#e5e7eb; --text-dim:#9ca3af; --text-faint:#6b7280;
   /* page-local: surface ramp and states the badge does not define */
+  --text-mute:#8b93a7;
   --bg:#0f1117; --bg-input:#111318;
   --bg-grad:linear-gradient(180deg,#161822 0%,#1a1d2a 100%);
   --accent:var(--blue); --accent-dim:rgba(59,130,246,.12);
@@ -240,6 +241,10 @@ tr:last-child td{{border-bottom:none}}
 .obs .v{{font-family:var(--mono);color:var(--text);word-break:break-all;
   user-select:all;cursor:text}}
 .obs .v.faint{{color:var(--text-faint)}}
+.obs pre.blob{{margin:0 0 10px;padding:10px 12px;background:var(--bg-input);
+  border:1px solid var(--line);border-radius:var(--radius-sm);
+  font-family:var(--mono);font-size:.72rem;color:var(--text-dim);
+  white-space:pre-wrap;word-break:break-all;max-height:320px;overflow:auto}}
 
 /* A summary strip, so the page opens with the state of the register rather
    than with prose. Same shape as the dotcom provider hero. */
@@ -444,15 +449,22 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
     readable = sum(
         1 for v in groups.values() for r in v if r.get("http_status") == 200
     )
-    unreadable = observed - readable
+    # Two counts, two sources, kept separate on purpose. `verified`/`readable`
+    # come from the log: how many observed responses we could read, and how
+    # many of those carried a quote that verified. `unreadable_anon` comes from
+    # the probed-endpoint list below, which covers endpoints we never logged a
+    # record for. Subtracting one from the other (observed - readable) produced
+    # a number that was wrong on every axis: it read as a count of unreadable
+    # endpoints while measuring observations.
+    unreadable_anon = sum(1 for e in UNREADABLE if e[2] != "200")
     parts.append(
         '<div class="summary">'
         f'<div><span class="k">sources</span><span class="v">{len(groups)}</span></div>'
         f'<div><span class="k">observations</span><span class="v">{observed}</span></div>'
         f'<div><span class="k">quote verified</span><span class="v">{verified}'
         f'<small> of {readable} readable</small></span></div>'
-        f'<div><span class="k">not readable</span><span class="v">{unreadable}'
-        f'<small> anonymous</small></span></div>'
+        f'<div><span class="k">not readable</span><span class="v">{unreadable_anon}'
+        f'<small> of {len(UNREADABLE)} probed</small></span></div>'
         f'<div><span class="k">runs recorded</span><span class="v">{runs}</span></div>'
         "</div>"
     )
@@ -541,8 +553,14 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
             else:
                 facts.append(fact("quote signature", "not attempted", "none"))
 
+            # A chip with an empty value reads as a blank label. When the field
+            # is absent the chip says so, the way the signature and freshness
+            # chips already do.
             tcb = latest.get("tcb_version", "")
-            facts.append(fact("tcb", tcb[:16], "good" if tcb else "none"))
+            if tcb:
+                facts.append(fact("tcb", tcb[:16], "good"))
+            else:
+                facts.append(fact("tcb", "not reported", "none"))
 
             fresh = latest.get("freshness_bound", "")
             if fresh == "true":
@@ -592,14 +610,37 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
                 + "</span></summary>"
             )
             parts.append('<div class="body">')
+            # The row's own re-fetch affordance, stated once and outside the
+            # field table. It used to be a table cell; when that table became a
+            # field dump the cell was dropped, which silently removed the one
+            # thing a reader needs to check a row. `_recheck_link` states the
+            # endpoint and either a re-fetch link or the single-use-challenge
+            # reason the link cannot work.
             if src:
                 parts.append(
-                    f'<p class="note">source <span class="mono">'
+                    '<p class="note">source <span class="mono">'
                     f"{html.escape(strip_query(src))}</span> {_recheck_link(src)}</p>"
                 )
             parts.append("<table>")
             for key in sorted(row):
                 value = row.get(key)
+                if key == "source_url":
+                    # The endpoint is already stated above with its re-fetch
+                    # affordance. Printing the raw URL here would put the
+                    # per-run nonce back on the page, which the log strips on
+                    # purpose.
+                    continue
+                if key == "workload_digests" and value:
+                    # A 15-entry JSON blob wrapped in a table cell overflows the
+                    # row and stops being readable. It gets the full-width
+                    # block the row already had.
+                    parts.append("</table>")
+                    parts.append(
+                        '<p class="note">workload digests</p>'
+                        f'<pre class="blob">{html.escape(str(value))}</pre>'
+                    )
+                    parts.append("<table>")
+                    continue
                 if value is None or value == "":
                     value = "&mdash;"
                     vcls = "v faint"

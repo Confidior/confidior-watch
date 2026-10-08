@@ -218,11 +218,14 @@ def test_no_observation_is_silently_capped():
 
 def test_collapsible_body_carries_every_field_recorded():
     """All its details, not a curated subset: a field the run stored is a fact
-    the page must be able to show."""
-    rows = [rec("v", "t1", measurement="m", some_obscure_field="kept")]
+    the page must be able to show. `source_url` is the one exception, stated on
+    its own line above the table."""
+    rows = [rec("v", "t1", measurement="m", some_obscure_field="kept",
+                source_url="https://api.example/x")]
     html = render(rows, generated_at="t")
-    assert "some_obscure_field" in html
+    assert '<td class="k">some_obscure_field</td>' in html
     assert "kept" in html
+    assert '<td class="k">source_url</td>' not in html
 
 
 def test_newest_observation_is_first_on_the_page():
@@ -230,6 +233,75 @@ def test_newest_observation_is_first_on_the_page():
             rec("v", "2026-10-09T06:00:00+00:00", measurement="NEW")]
     html = render(rows, generated_at="t")
     assert html.index("NEW") < html.index("OLD")
+
+
+def test_no_fact_chip_renders_with_an_empty_value():
+    """A chip whose value is empty reads as a blank label. Every chip states
+    something, including "not reported"."""
+    import re
+
+    html = render(ROWS, generated_at="t")
+    chips = re.findall(r'<span class="fact [^"]*">(.*?)</span>', html, re.S)
+    for chip in chips:
+        value = re.search(r"<b>(.*?)</b>", chip)
+        assert value is not None, f"chip with no value: {chip!r}"
+        assert value.group(1).strip(), f"chip with an empty value: {chip!r}"
+
+
+def test_source_line_strips_the_per_run_nonce():
+    """The displayed endpoint carries no challenge parameter. The nonce is
+    still recorded as its own labelled field (it is a fact about the run), but
+    it is not part of the endpoint's identity, so the source line omits it."""
+    rows = [rec("v", "t1", measurement="m",
+                source_url="https://api.example/x?nonce=SECRETNONCE123", nonce="SECRETNONCE123")]
+    html = render(rows, generated_at="t")
+    source_line = html.split('<p class="note">source', 1)[1].split("</p>", 1)[0]
+    assert "https://api.example/x" in source_line
+    assert "nonce=" not in source_line
+    assert "SECRETNONCE123" not in source_line
+
+
+def test_identity_hash_is_shown_whole_inside_the_collapsible():
+    """The response hash is the thing a reader re-checks. Truncating it in the
+    body would make the whole row unverifiable."""
+    rows = [rec("v", "t1", measurement="m", response_sha256="b" * 64)]
+    html = render(rows, generated_at="t")
+    assert "b" * 64 in html
+
+
+def test_every_recorded_field_appears_in_its_collapsible():
+    """A field the run stored is a fact the page can show, so no key is
+    filtered out of the body (bar source_url, which is stated above it)."""
+    keys = {"measurement": "m", "tls_group": "X25519", "weird_key": "w"}
+    html = render([rec("v", "t1", **keys)], generated_at="t")
+    for key in keys:
+        assert f'<td class="k">{key}</td>' in html
+
+
+def test_not_readable_count_is_not_observations_minus_readable():
+    """Regression: the summary read `observed - readable`, which produced
+    "not readable 0 anonymous" whenever every observation was readable, while
+    the panel below listed 8 unreadable endpoints."""
+    from watch.render import UNREADABLE
+
+    html = _flat(render(ROWS, generated_at="t"))
+    expected = sum(1 for e in UNREADABLE if e[2] != "200")
+    assert f"of {len(UNREADABLE)} probed" in html
+    assert expected == 8 and f">{expected}<" in html.replace(" ", "")
+
+
+def test_used_css_variables_are_all_defined():
+    """A var() with no definition renders as the inherited colour, silently.
+    --text-mute was used six times and never defined."""
+    import re
+
+    from watch.render import TOKENS
+
+    defined = set(re.findall(r"--([a-z0-9-]+)\s*:", TOKENS))
+    html = render(ROWS, generated_at="t")
+    style = html.split("<style>", 1)[1].split("</style>", 1)[0]
+    used = set(re.findall(r"var\(--([a-z0-9-]+)\)", style))
+    assert used - defined == set()
 
 
 def test_each_row_links_to_the_source_so_a_reader_can_recheck():
