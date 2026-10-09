@@ -154,6 +154,11 @@ tr:last-child td{border-bottom:none}
   letter-spacing:.08em;color:var(--text-mute);margin:16px 0 8px;font-weight:600}
 .obs .facts{margin:0 0 4px}
 .obs table.kv td.k{width:38%}
+.obs .opener{font-family:var(--mono);font-size:.72rem;color:var(--accent);
+  border:1px solid var(--accent-dim);background:var(--accent-dim);
+  border-radius:999px;padding:2px 9px;white-space:nowrap}
+.obs .raw{display:block;font-family:var(--mono);font-size:.62rem;
+  color:var(--text-faint);opacity:.7;letter-spacing:.02em}
 .obs pre.blob{margin:0 0 10px;padding:10px 12px;background:var(--bg-input);
   border:1px solid var(--line);border-radius:var(--radius-sm);
   font-family:var(--mono);font-size:.72rem;color:var(--text-dim);
@@ -186,7 +191,7 @@ footer a{color:var(--text-dim)}
 <h1>Published attestation evidence, over time.</h1>
 <p class="lede">A scheduled crawl that records what vendors publish about their own attestation evidence, so that point-in-time observations become a time series.</p>
 <p class="note">This page observes; it does not grade. No verdict, score or ranking appears here and none is implied. Observations only, gaps visible, not a service, no uptime commitment. Every row carries the SHA-256 of the raw response so you can re-fetch the source and compare.</p>
-<p class="note">Generated <span class="mono">2026-10-09T00:08:27+00:00</span> &middot; 5 observations across 5 sources &middot; 1 run recorded.</p>
+<p class="note">Generated <span class="mono">2026-10-09T00:14:40+00:00</span> &middot; 5 observations across 5 sources &middot; 1 run recorded.</p>
 <p class="note">Each run verifies, not merely fetches: the quote signature against the vendor's root of trust, the TCB security version, whether the response was bound to a challenge this run generated, and what key exchange the endpoint negotiates. A check that could not run is shown as <em>not attempted</em> rather than as a failure, because those are different facts.</p>
 <div class="summary"><div><span class="k">sources</span><span class="v">5</span></div><div><span class="k">observations</span><span class="v">5</span></div><div><span class="k">quote verified</span><span class="v">3<small> of 5 readable</small></span></div><div><span class="k">not readable</span><span class="v">8<small> of 12 probed</small></span></div><div><span class="k">runs recorded</span><span class="v">1</span></div></div>
 <details class="legend"><summary>What each check means</summary><table><tr><th>check</th><th>what it means</th></tr><tr><td class='m'>quote signature</td><td>the quote verifies against the vendor's root of trust: Intel's PCK certificate chain for TDX, the AWS Nitro root for Nitro</td></tr><tr><td class='m'>TCB SVN</td><td>the security version number of the platform, one byte per component. It moves on microcode and module updates and is the field CVEs map against</td></tr><tr><td class='m'>freshness</td><td>the response carried a challenge this run generated, so it was produced after we asked rather than replayed</td></tr><tr><td class='m'>key exchange</td><td>what TLS group the endpoint negotiates when offered a post-quantum hybrid</td></tr></table></details>
@@ -195,7 +200,7 @@ footer a{color:var(--text-dim)}
 <p class="headline first">first observed <span class="stamp">2026-10-08T21:56:10</span> &mdash; one observation, so there is nothing to compare against yet</p>
 <h3>Observations <span class="note">1 recorded, newest first. Open one to see every field that run recorded.</span></h3>
 <details class="obs">
-<summary><span class="when">2026-10-08T21:56:10</span><span class="ok">http 200</span><span class="ident">e0e5833d3aef03f117275df2</span><span class="end"></span></summary>
+<summary><span class="when">2026-10-08T21:56:10</span><span class="ok">http 200</span><span class="ident">e0e5833d3aef03f117275df2</span><span class="end"><span class="opener">77 fields</span></span></summary>
 <div class="body">
 <div class="facts"><span class="fact none">quote signature <b>not attempted</b></span><span class="fact none">tcb <b>not reported</b></span><span class="fact good">freshness <b>bound</b></span><span class="fact good">key exchange <b>X25519MLKEM768</b></span></div>
 <p class="note">source <span class="mono">https://api.confidential.ai/attestation</span> <a class="recheck" href="https://api.confidential.ai/attestation">endpoint &rarr;</a><br><span class="recheck-note">not re-fetchable: this response was bound to a single-use challenge, so the same URL now returns 409</span></p>
@@ -212,7 +217,7 @@ footer a{color:var(--text-dim)}
 <tr><td class="m">GPU evidence consistency</td><td><span class="g g-unverifiable">unverifiable</span></td><td class="m">unknown</td></tr>
 </table>
 <h4>Measured surface <span class="note">12 of 28 fields published</span></h4>
-<table class="kv">
+<table class="kv surface">
 <tr><td class="k">platform</td><td class="v">confidential-ai-c8s</td></tr>
 <tr><td class="k">attestation protocol</td><td class="v">c8s/attest-pq/v1+xwing</td></tr>
 <tr><td class="k">protocol commit</td><td class="v">466ce79</td></tr>
@@ -226,87 +231,43 @@ footer a{color:var(--text-dim)}
 <tr><td class="k">operator key status</td><td class="v">requires-attested-cds-read</td></tr>
 <tr><td class="k">receipts published</td><td class="v">6</td></tr>
 </table>
-<h4>Every field recorded</h4>
-<table>
-<tr><td class="k">app_id</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">cert_spki_der_bytes</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">cert_spki_sha256</td><td class="v">sha256:0dea2dd7ee630fe23b9de95d8a835e8bacff2702c79f7a3149e22cae9dac7426</td></tr>
-<tr><td class="k">collateral_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">crypto_material_hash</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">device_evidence_hash</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">doc_bytes</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">doc_format</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">e2ee_key_algos</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">e2ee_key_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">e2ee_versions</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">event_names</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">freshness_bound</td><td class="v">true</td></tr>
-<tr><td class="k">freshness_note</td><td class="v">response echoes the challenge sent this run</td></tr>
-<tr><td class="k">frontdoor_mode</td><td class="v">acme</td></tr>
-<tr><td class="k">frontdoor_platform</td><td class="v">tdx</td></tr>
-<tr><td class="k">gpu_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">gpu_evidence_count</td><td class="v">0</td></tr>
-<tr><td class="k">gpu_evidence_reason</td><td class="v">the pinned c8s protocol serves no gpu_attested or nvidia_gpu field, so this response carries no GPU evidence; a GPU claim needs the c8s attestation API</td></tr>
-<tr><td class="k">hpke_key_present</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">hpke_public_key</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">http_status</td><td class="v">200</td></tr>
-<tr><td class="k">key_custody_provider</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">keyset_digest</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">keyset_not_after</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">measurement</td><td class="v">e0e5833d3aef03f117275df2c95a8d638ba248291f6f28e37c9e89b35b931ed5</td></tr>
-<tr><td class="k">mesh_ca</td><td class="v">sha256:0dea2dd7ee630fe23b9de95d8a835e8bacff2702c79f7a3149e22cae9dac7426</td></tr>
-<tr><td class="k">mr_kms</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">nonce</td><td class="v">E8HH3RvpNYO8P9-c4IuURnUvpi9vpi_p-5sxjO5cNhQ</td></tr>
-<tr><td class="k">note</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">nvidia_arch</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">nvidia_evidence_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">observed_at</td><td class="v">2026-10-08T21:56:10+00:00</td></tr>
-<tr><td class="k">operational_status</td><td class="v">not-verified</td></tr>
-<tr><td class="k">operator_key_status</td><td class="v">requires-attested-cds-read</td></tr>
-<tr><td class="k">operator_keyset_sha256</td><td class="v">sha256:18185552cdbfe68f331773f83064b649e3ba8185c4143ceb47a4d5632e5fe6ad</td></tr>
-<tr><td class="k">os_image_hash</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">platform</td><td class="v">confidential-ai-c8s</td></tr>
-<tr><td class="k">protocol</td><td class="v">c8s/attest-pq/v1+xwing</td></tr>
-<tr><td class="k">protocol_commit</td><td class="v">466ce79</td></tr>
-<tr><td class="k">provenance_image</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">provenance_image_digest</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">raw_bytes</td><td class="v">890422</td></tr>
-<tr><td class="k">receipt_count</td><td class="v">6</td></tr>
-<tr><td class="k">receipt_key_algos</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">receipt_key_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">release_bundle</td><td class="v">sha256:82859291c495814e7fe6347d58d526bb5152cff88f520db1eba19cc6258a5586</td></tr>
-<tr><td class="k">release_id</td><td class="v">v0.13.28-rc.2</td></tr>
-<tr><td class="k">repo_commit</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">repo_url</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">report_data</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">response_sha256</td><td class="v">1eda5ae0d551915f570246f2cbe1ff2de28896033a937ed24b94cfe2eef1a574</td></tr>
-<tr><td class="k">schema_version</td><td class="v">2</td></tr>
-<tr><td class="k">scope</td><td class="v">launch-or-admission-only</td></tr>
-<tr><td class="k">serving_leaf_sha256</td><td class="v">4GKzNHgFCtd7ZBCdVSG3vFt4HvIMk5ZGtLTNWWcT-nk</td></tr>
-<tr><td class="k">serving_role</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">signature_error</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">signature_valid</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">snp_report_data</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">snp_tcb</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tcb_reference</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tcb_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tcb_version</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tee_type</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_binding_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_binding_domains</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_binding_status</td><td class="v">requires-attest-lb</td></tr>
-<tr><td class="k">tls_error</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_group</td><td class="v">X25519MLKEM768</td></tr>
-<tr><td class="k">tls_pq</td><td class="v">hybrid</td></tr>
-<tr><td class="k">tls_spki_fingerprint</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">vcek_present</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">vendor</td><td class="v">confidentialai</td></tr>
-<tr><td class="k">workload</td><td class="v">inference-stack</td></tr>
-<tr><td class="k">workload_count</td><td class="v">15</td></tr>
-</table>
+<h4>Every field recorded <span class="note">32 with a value, 43 empty</span></h4>
 <p class="note">workload digests</p><pre class="blob">{&quot;c8s-operator-f6176b59be5e&quot;:&quot;sha256:f6176b59be5efb653a92715c95c87ed1186e5cf9f58d4bc02003440cb628795a&quot;,&quot;c8s-router&quot;:&quot;sha256:c2c3905bda3dc8de80023e19bed0a45745279d26e5586cdee64370c8f9b12348&quot;,&quot;cds-5bc6fb208526&quot;:&quot;sha256:5bc6fb208526ca605bbfea51aa67599008d549130404465271b035429945bb05&quot;,&quot;gateway&quot;:&quot;sha256:3532143fd358d46acc2b3eb4902e5c5baae3691e53825aec1d51e1e9ab6c62a4&quot;,&quot;gateway-state-mounter&quot;:&quot;sha256:1e0a86e57d247923571b75e0aaf48a1449cf8c543d51fb3e07a4a7d7bfa79316&quot;,&quot;inference-worker-0&quot;:&quot;sha256:07bb13c3be6f8f2c3cbfaac4757b04904bb864e546fdc10de57aae2a28f8d88d&quot;,&quot;inference-worker-1&quot;:&quot;sha256:07bb13c3be6f8f2c3cbfaac4757b04904bb864e546fdc10de57aae2a28f8d88d&quot;,&quot;kube-state-metrics&quot;:&quot;sha256:44cfc22900bf545fb9a073adea2132b80558b7e9b6a6f687a8f23b4d7fc438c9&quot;,&quot;metrics-collector&quot;:&quot;sha256:8672a850efe2f9874702406c8318704edb363587f8c2ca88586b4c8fdb5cea24&quot;,&quot;nginx-unprivileged-c2c3905bda3d&quot;:&quot;sha256:c2c3905bda3dc8de80023e19bed0a45745279d26e5586cdee64370c8f9b12348&quot;,&quot;nri-image-policy-6793768e6b94&quot;:&quot;sha256:6793768e6b94006d9ef0490a289b425c38b4c5d9bf9d081a4e98c6736a818769&quot;,&quot;ratls-mesh-fd79577c3efb&quot;:&quot;sha256:fd79577c3efb4134d983e9f691467ab55bb769acd417ef0c7c627651c49d0d18&quot;,&quot;sglang-router&quot;:&quot;sha256:07bb13c3be6f8f2c3cbfaac4757b04904bb864e546fdc10de57aae2a28f8d88d&quot;,&quot;tailscale-candidate-control-plane&quot;:&quot;sha256:321ce041508c19079b57a28b6666c8d81ab0b08accc0a2585b3ab663d557ac24&quot;,&quot;volumed-c2b437c222c3&quot;:&quot;sha256:c2b437c222c33c8ee223dd7b96dfe7993b90c0b4d8b2ff86aa91428f021b4368&quot;}</pre>
-<table>
+<table class="kv fields">
+<tr><td class="k">cert SPKI<span class="raw">cert_spki_sha256</span></td><td class="v">sha256:0dea2dd7ee630fe23b9de95d8a835e8bacff2702c79f7a3149e22cae9dac7426</td></tr>
+<tr><td class="k">freshness bound<span class="raw">freshness_bound</span></td><td class="v">true</td></tr>
+<tr><td class="k">freshness note<span class="raw">freshness_note</span></td><td class="v">response echoes the challenge sent this run</td></tr>
+<tr><td class="k">frontdoor mode<span class="raw">frontdoor_mode</span></td><td class="v">acme</td></tr>
+<tr><td class="k">frontdoor platform<span class="raw">frontdoor_platform</span></td><td class="v">tdx</td></tr>
+<tr><td class="k">gpu evidence count<span class="raw">gpu_evidence_count</span></td><td class="v">0</td></tr>
+<tr><td class="k">gpu evidence reason<span class="raw">gpu_evidence_reason</span></td><td class="v">the pinned c8s protocol serves no gpu_attested or nvidia_gpu field, so this response carries no GPU evidence; a GPU claim needs the c8s attestation API</td></tr>
+<tr><td class="k">http status<span class="raw">http_status</span></td><td class="v">200</td></tr>
+<tr><td class="k">measurement<span class="raw">measurement</span></td><td class="v">e0e5833d3aef03f117275df2c95a8d638ba248291f6f28e37c9e89b35b931ed5</td></tr>
+<tr><td class="k">mesh ca<span class="raw">mesh_ca</span></td><td class="v">sha256:0dea2dd7ee630fe23b9de95d8a835e8bacff2702c79f7a3149e22cae9dac7426</td></tr>
+<tr><td class="k">nonce<span class="raw">nonce</span></td><td class="v">E8HH3RvpNYO8P9-c4IuURnUvpi9vpi_p-5sxjO5cNhQ</td></tr>
+<tr><td class="k">observed at<span class="raw">observed_at</span></td><td class="v">2026-10-08T21:56:10+00:00</td></tr>
+<tr><td class="k">operational status<span class="raw">operational_status</span></td><td class="v">not-verified</td></tr>
+<tr><td class="k">operator key status<span class="raw">operator_key_status</span></td><td class="v">requires-attested-cds-read</td></tr>
+<tr><td class="k">operator keyset sha256<span class="raw">operator_keyset_sha256</span></td><td class="v">sha256:18185552cdbfe68f331773f83064b649e3ba8185c4143ceb47a4d5632e5fe6ad</td></tr>
+<tr><td class="k">platform<span class="raw">platform</span></td><td class="v">confidential-ai-c8s</td></tr>
+<tr><td class="k">attestation protocol<span class="raw">protocol</span></td><td class="v">c8s/attest-pq/v1+xwing</td></tr>
+<tr><td class="k">protocol commit<span class="raw">protocol_commit</span></td><td class="v">466ce79</td></tr>
+<tr><td class="k">raw bytes<span class="raw">raw_bytes</span></td><td class="v">890422</td></tr>
+<tr><td class="k">receipt count<span class="raw">receipt_count</span></td><td class="v">6</td></tr>
+<tr><td class="k">release bundle<span class="raw">release_bundle</span></td><td class="v">sha256:82859291c495814e7fe6347d58d526bb5152cff88f520db1eba19cc6258a5586</td></tr>
+<tr><td class="k">release<span class="raw">release_id</span></td><td class="v">v0.13.28-rc.2</td></tr>
+<tr><td class="k">response sha256<span class="raw">response_sha256</span></td><td class="v">1eda5ae0d551915f570246f2cbe1ff2de28896033a937ed24b94cfe2eef1a574</td></tr>
+<tr><td class="k">schema version<span class="raw">schema_version</span></td><td class="v">2</td></tr>
+<tr><td class="k">scope<span class="raw">scope</span></td><td class="v">launch-or-admission-only</td></tr>
+<tr><td class="k">serving leaf sha256<span class="raw">serving_leaf_sha256</span></td><td class="v">4GKzNHgFCtd7ZBCdVSG3vFt4HvIMk5ZGtLTNWWcT-nk</td></tr>
+<tr><td class="k">tls binding status<span class="raw">tls_binding_status</span></td><td class="v">requires-attest-lb</td></tr>
+<tr><td class="k">tls group<span class="raw">tls_group</span></td><td class="v">X25519MLKEM768</td></tr>
+<tr><td class="k">tls pq<span class="raw">tls_pq</span></td><td class="v">hybrid</td></tr>
+<tr><td class="k">vendor<span class="raw">vendor</span></td><td class="v">confidentialai</td></tr>
+<tr><td class="k">workload<span class="raw">workload</span></td><td class="v">inference-stack</td></tr>
+<tr><td class="k">workload count<span class="raw">workload_count</span></td><td class="v">15</td></tr>
 </table>
+<p class="empty">Empty this run: app id cert spki der bytes collateral count crypto material hash device evidence hash doc bytes document format e2ee key algos e2ee key count e2ee versions event names gpu count hpke key present hpke public key key custody provider keyset digest keyset not after KMS measurement note nvidia arch nvidia evidence count OS image hash provenance image provenance image digest receipt key algos receipt key count source commit repo url report data serving role signature error signature valid snp report data snp tcb TDX module tcb status TCB SVN tee type tls binding count tls binding domains tls error tls spki fingerprint vcek present</p>
 </div></details>
 <p class="empty">To check a row: open <em>re-fetch</em>, save the response, and compare its SHA-256 with the hash above.</p>
 <h3>Changes</h3>
@@ -318,7 +279,7 @@ footer a{color:var(--text-dim)}
 <p class="headline first">first observed <span class="stamp">2026-10-08T21:56:10</span> &mdash; one observation, so there is nothing to compare against yet</p>
 <h3>Observations <span class="note">1 recorded, newest first. Open one to see every field that run recorded.</span></h3>
 <details class="obs">
-<summary><span class="when">2026-10-08T21:56:10</span><span class="ok">http 200</span><span class="ident">0637b3d506c80c0328c84697</span><span class="end"></span></summary>
+<summary><span class="when">2026-10-08T21:56:10</span><span class="ok">http 200</span><span class="ident">0637b3d506c80c0328c84697</span><span class="end"><span class="opener">77 fields</span></span></summary>
 <div class="body">
 <div class="facts"><span class="fact good">quote signature <b>verified</b></span><span class="fact good">tcb <b>0b01050000000000</b></span><span class="fact bad">freshness <b>not bound</b></span><span class="fact good">key exchange <b>X25519MLKEM768</b></span></div>
 <p class="note">source <span class="mono">https://inference.phala.com/v1/aci/attestation</span> <a class="recheck" href="https://inference.phala.com/v1/aci/attestation">endpoint &rarr;</a><br><span class="recheck-note">not re-fetchable: this response was bound to a single-use challenge, so the same URL now returns 409</span></p>
@@ -335,7 +296,7 @@ footer a{color:var(--text-dim)}
 <tr><td class="m">GPU evidence consistency</td><td><span class="g g-good">good</span></td><td class="m">corroborated</td></tr>
 </table>
 <h4>Measured surface <span class="note">12 of 28 fields published</span></h4>
-<table class="kv">
+<table class="kv surface">
 <tr><td class="k">serving role</td><td class="v">aggregator</td></tr>
 <tr><td class="k">platform</td><td class="v">tdx</td></tr>
 <tr><td class="k">tee type</td><td class="v">tdx</td></tr>
@@ -349,85 +310,45 @@ footer a{color:var(--text-dim)}
 <tr><td class="k">source commit</td><td class="v">8d0a666a2418898a8c823a9af49a634edd122a64</td></tr>
 <tr><td class="k">measured boot events</td><td class="v">app-id,boot-mr-done,compose-hash,instance-id,key-provider,mr-kms,os-image-hash,storage-fs,system-preparing,system-ready</td></tr>
 </table>
-<h4>Every field recorded</h4>
-<table>
-<tr><td class="k">app_id</td><td class="v">fdb7a14e5a6675f752e2cb69c9067a98ca402918</td></tr>
-<tr><td class="k">cert_spki_der_bytes</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">cert_spki_sha256</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">collateral_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">crypto_material_hash</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">device_evidence_hash</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">doc_bytes</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">doc_format</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">e2ee_key_algos</td><td class="v">secp256k1-aes-256-gcm-hkdf-sha256,x25519-aes-256-gcm-hkdf-sha256</td></tr>
-<tr><td class="k">e2ee_key_count</td><td class="v">2</td></tr>
-<tr><td class="k">e2ee_versions</td><td class="v">2</td></tr>
-<tr><td class="k">event_names</td><td class="v">app-id,boot-mr-done,compose-hash,instance-id,key-provider,mr-kms,os-image-hash,storage-fs,system-preparing,system-ready</td></tr>
-<tr><td class="k">freshness_bound</td><td class="v">false</td></tr>
-<tr><td class="k">freshness_note</td><td class="v">no report_data binding found in the response</td></tr>
-<tr><td class="k">frontdoor_mode</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">frontdoor_platform</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">gpu_count</td><td class="v">0</td></tr>
-<tr><td class="k">gpu_evidence_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">gpu_evidence_reason</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">hpke_key_present</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">hpke_public_key</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">http_status</td><td class="v">200</td></tr>
-<tr><td class="k">key_custody_provider</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">keyset_digest</td><td class="v">sha256:ef8a03c0c5e349310394c0d5865f766f8a1258f1acdb5fcb6ed2ebcd757e5f5a</td></tr>
-<tr><td class="k">keyset_not_after</td><td class="v">1792250755</td></tr>
-<tr><td class="k">measurement</td><td class="v">0637b3d506c80c0328c84697c290f5fb7eef811c8d022124e04ee9b0f5f99567</td></tr>
-<tr><td class="k">mesh_ca</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">mr_kms</td><td class="v">692afc6d7a86a32cfc1ebd9cad1a576aab012bab46986ba609bc8d6407270572</td></tr>
-<tr><td class="k">nonce</td><td class="v">8ac8400803ca641eb14c48209498ab02c3ab0c116078feb78e8dcf94beabce90</td></tr>
-<tr><td class="k">note</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">nvidia_arch</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">nvidia_evidence_count</td><td class="v">0</td></tr>
-<tr><td class="k">observed_at</td><td class="v">2026-10-08T21:56:10+00:00</td></tr>
-<tr><td class="k">operational_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">operator_key_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">operator_keyset_sha256</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">os_image_hash</td><td class="v">bd369a8c2f9edb2b52dad48ac8e0b32dde5f1337c423a506b48d07403a7d8033</td></tr>
-<tr><td class="k">platform</td><td class="v">tdx</td></tr>
-<tr><td class="k">protocol</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">protocol_commit</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">provenance_image</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">provenance_image_digest</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">raw_bytes</td><td class="v">51705</td></tr>
-<tr><td class="k">receipt_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">receipt_key_algos</td><td class="v">ed25519</td></tr>
-<tr><td class="k">receipt_key_count</td><td class="v">1</td></tr>
-<tr><td class="k">release_bundle</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">release_id</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">repo_commit</td><td class="v">8d0a666a2418898a8c823a9af49a634edd122a64</td></tr>
-<tr><td class="k">repo_url</td><td class="v">https://github.com/Dstack-TEE/private-ai-gateway.git</td></tr>
-<tr><td class="k">report_data</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">response_sha256</td><td class="v">99ee1443323e516f9b4ceeee24be53299250731c3b2deaf1c2f2222b258924ad</td></tr>
-<tr><td class="k">schema_version</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">scope</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">serving_leaf_sha256</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">serving_role</td><td class="v">aggregator</td></tr>
-<tr><td class="k">signature_error</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">signature_valid</td><td class="v">true</td></tr>
-<tr><td class="k">snp_report_data</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">snp_tcb</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tcb_reference</td><td class="v">7bf063280e94fb051f5dd7b1fc59ce9aac42bb961df8d44b709c9b0ff87a7b4df648657ba6d1189589feab1d5a3c9a9d</td></tr>
-<tr><td class="k">tcb_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tcb_version</td><td class="v">0b010500000000000000000000000000</td></tr>
-<tr><td class="k">tee_type</td><td class="v">tdx</td></tr>
-<tr><td class="k">tls_binding_count</td><td class="v">4</td></tr>
-<tr><td class="k">tls_binding_domains</td><td class="v">api.redpill.ai,inference.phala.com,openrouter.phala.com,tee.redpill.ai</td></tr>
-<tr><td class="k">tls_binding_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_error</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_group</td><td class="v">X25519MLKEM768</td></tr>
-<tr><td class="k">tls_pq</td><td class="v">hybrid</td></tr>
-<tr><td class="k">tls_spki_fingerprint</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">vcek_present</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">vendor</td><td class="v">phala</td></tr>
-<tr><td class="k">workload</td><td class="v">gateway</td></tr>
-<tr><td class="k">workload_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">workload_digests</td><td class="v faint">&mdash;</td></tr>
+<h4>Every field recorded <span class="note">35 with a value, 41 empty</span></h4>
+<table class="kv fields">
+<tr><td class="k">app id<span class="raw">app_id</span></td><td class="v">fdb7a14e5a6675f752e2cb69c9067a98ca402918</td></tr>
+<tr><td class="k">e2ee key algos<span class="raw">e2ee_key_algos</span></td><td class="v">secp256k1-aes-256-gcm-hkdf-sha256,x25519-aes-256-gcm-hkdf-sha256</td></tr>
+<tr><td class="k">e2ee key count<span class="raw">e2ee_key_count</span></td><td class="v">2</td></tr>
+<tr><td class="k">e2ee versions<span class="raw">e2ee_versions</span></td><td class="v">2</td></tr>
+<tr><td class="k">event names<span class="raw">event_names</span></td><td class="v">app-id,boot-mr-done,compose-hash,instance-id,key-provider,mr-kms,os-image-hash,storage-fs,system-preparing,system-ready</td></tr>
+<tr><td class="k">freshness bound<span class="raw">freshness_bound</span></td><td class="v">false</td></tr>
+<tr><td class="k">freshness note<span class="raw">freshness_note</span></td><td class="v">no report_data binding found in the response</td></tr>
+<tr><td class="k">gpu count<span class="raw">gpu_count</span></td><td class="v">0</td></tr>
+<tr><td class="k">http status<span class="raw">http_status</span></td><td class="v">200</td></tr>
+<tr><td class="k">keyset digest<span class="raw">keyset_digest</span></td><td class="v">sha256:ef8a03c0c5e349310394c0d5865f766f8a1258f1acdb5fcb6ed2ebcd757e5f5a</td></tr>
+<tr><td class="k">keyset not after<span class="raw">keyset_not_after</span></td><td class="v">1792250755</td></tr>
+<tr><td class="k">measurement<span class="raw">measurement</span></td><td class="v">0637b3d506c80c0328c84697c290f5fb7eef811c8d022124e04ee9b0f5f99567</td></tr>
+<tr><td class="k">KMS measurement<span class="raw">mr_kms</span></td><td class="v">692afc6d7a86a32cfc1ebd9cad1a576aab012bab46986ba609bc8d6407270572</td></tr>
+<tr><td class="k">nonce<span class="raw">nonce</span></td><td class="v">8ac8400803ca641eb14c48209498ab02c3ab0c116078feb78e8dcf94beabce90</td></tr>
+<tr><td class="k">nvidia evidence count<span class="raw">nvidia_evidence_count</span></td><td class="v">0</td></tr>
+<tr><td class="k">observed at<span class="raw">observed_at</span></td><td class="v">2026-10-08T21:56:10+00:00</td></tr>
+<tr><td class="k">OS image hash<span class="raw">os_image_hash</span></td><td class="v">bd369a8c2f9edb2b52dad48ac8e0b32dde5f1337c423a506b48d07403a7d8033</td></tr>
+<tr><td class="k">platform<span class="raw">platform</span></td><td class="v">tdx</td></tr>
+<tr><td class="k">raw bytes<span class="raw">raw_bytes</span></td><td class="v">51705</td></tr>
+<tr><td class="k">receipt key algos<span class="raw">receipt_key_algos</span></td><td class="v">ed25519</td></tr>
+<tr><td class="k">receipt key count<span class="raw">receipt_key_count</span></td><td class="v">1</td></tr>
+<tr><td class="k">source commit<span class="raw">repo_commit</span></td><td class="v">8d0a666a2418898a8c823a9af49a634edd122a64</td></tr>
+<tr><td class="k">repo url<span class="raw">repo_url</span></td><td class="v">https://github.com/Dstack-TEE/private-ai-gateway.git</td></tr>
+<tr><td class="k">response sha256<span class="raw">response_sha256</span></td><td class="v">99ee1443323e516f9b4ceeee24be53299250731c3b2deaf1c2f2222b258924ad</td></tr>
+<tr><td class="k">serving role<span class="raw">serving_role</span></td><td class="v">aggregator</td></tr>
+<tr><td class="k">signature valid<span class="raw">signature_valid</span></td><td class="v">true</td></tr>
+<tr><td class="k">TDX module<span class="raw">tcb_reference</span></td><td class="v">7bf063280e94fb051f5dd7b1fc59ce9aac42bb961df8d44b709c9b0ff87a7b4df648657ba6d1189589feab1d5a3c9a9d</td></tr>
+<tr><td class="k">TCB SVN<span class="raw">tcb_version</span></td><td class="v">0b010500000000000000000000000000</td></tr>
+<tr><td class="k">tee type<span class="raw">tee_type</span></td><td class="v">tdx</td></tr>
+<tr><td class="k">tls binding count<span class="raw">tls_binding_count</span></td><td class="v">4</td></tr>
+<tr><td class="k">tls binding domains<span class="raw">tls_binding_domains</span></td><td class="v">api.redpill.ai,inference.phala.com,openrouter.phala.com,tee.redpill.ai</td></tr>
+<tr><td class="k">tls group<span class="raw">tls_group</span></td><td class="v">X25519MLKEM768</td></tr>
+<tr><td class="k">tls pq<span class="raw">tls_pq</span></td><td class="v">hybrid</td></tr>
+<tr><td class="k">vendor<span class="raw">vendor</span></td><td class="v">phala</td></tr>
+<tr><td class="k">workload<span class="raw">workload</span></td><td class="v">gateway</td></tr>
 </table>
+<p class="empty">Empty this run: cert spki der bytes cert SPKI collateral count crypto material hash device evidence hash doc bytes document format frontdoor mode frontdoor platform gpu evidence count gpu evidence reason hpke key present hpke public key key custody provider mesh ca note nvidia arch operational status operator key status operator keyset sha256 attestation protocol protocol commit provenance image provenance image digest receipt count release bundle release report data schema version scope serving leaf sha256 signature error snp report data snp tcb tcb status tls binding status tls error tls spki fingerprint vcek present workload count workload digests</p>
 </div></details>
 <p class="empty">To check a row: open <em>re-fetch</em>, save the response, and compare its SHA-256 with the hash above.</p>
 <h3>Changes</h3>
@@ -439,7 +360,7 @@ footer a{color:var(--text-dim)}
 <p class="headline first">first observed <span class="stamp">2026-10-08T21:56:10</span> &mdash; one observation, so there is nothing to compare against yet</p>
 <h3>Observations <span class="note">1 recorded, newest first. Open one to see every field that run recorded.</span></h3>
 <details class="obs">
-<summary><span class="when">2026-10-08T21:56:10</span><span class="ok">http 200</span><span class="ident">2cd8efe0ab0d7b2cff71453b</span><span class="end"></span></summary>
+<summary><span class="when">2026-10-08T21:56:10</span><span class="ok">http 200</span><span class="ident">2cd8efe0ab0d7b2cff71453b</span><span class="end"><span class="opener">77 fields</span></span></summary>
 <div class="body">
 <div class="facts"><span class="fact good">quote signature <b>verified</b></span><span class="fact none">tcb <b>not reported</b></span><span class="fact none">freshness <b>not attempted</b></span><span class="fact good">key exchange <b>X25519MLKEM768</b></span></div>
 <p class="note">source <span class="mono">https://api.ppq.ai/attestation</span> <a class="recheck" href="https://api.ppq.ai/attestation">re-fetch &rarr;</a></p>
@@ -456,90 +377,31 @@ footer a{color:var(--text-dim)}
 <tr><td class="m">GPU evidence consistency</td><td><span class="g g-unverifiable">unverifiable</span></td><td class="m">unknown</td></tr>
 </table>
 <h4>Measured surface <span class="note">3 of 28 fields published</span></h4>
-<table class="kv">
+<table class="kv surface">
 <tr><td class="k">platform</td><td class="v">aws-nitro</td></tr>
 <tr><td class="k">HPKE key published</td><td class="v">yes</td></tr>
 <tr><td class="k">document format</td><td class="v">nsm-cose-sign1</td></tr>
 </table>
-<h4>Every field recorded</h4>
-<table>
-<tr><td class="k">app_id</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">cert_spki_der_bytes</td><td class="v">124</td></tr>
-<tr><td class="k">cert_spki_sha256</td><td class="v">642eda68cc9e0c91be6c029590f00129f8ad069746618c646373937a9cccde39</td></tr>
-<tr><td class="k">collateral_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">crypto_material_hash</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">device_evidence_hash</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">doc_bytes</td><td class="v">4526</td></tr>
-<tr><td class="k">doc_format</td><td class="v">nsm-cose-sign1</td></tr>
-<tr><td class="k">e2ee_key_algos</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">e2ee_key_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">e2ee_versions</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">event_names</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">freshness_bound</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">freshness_note</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">frontdoor_mode</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">frontdoor_platform</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">gpu_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">gpu_evidence_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">gpu_evidence_reason</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">hpke_key_present</td><td class="v">yes</td></tr>
-<tr><td class="k">hpke_public_key</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">http_status</td><td class="v">200</td></tr>
-<tr><td class="k">key_custody_provider</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">keyset_digest</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">keyset_not_after</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">measurement</td><td class="v">2cd8efe0ab0d7b2cff71453b05402fce98bab4ca48700fd60af1f848e3f0e8b9</td></tr>
-<tr><td class="k">mesh_ca</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">mr_kms</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">nonce</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">note</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">nvidia_arch</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">nvidia_evidence_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">observed_at</td><td class="v">2026-10-08T21:56:10+00:00</td></tr>
-<tr><td class="k">operational_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">operator_key_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">operator_keyset_sha256</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">os_image_hash</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">platform</td><td class="v">aws-nitro</td></tr>
-<tr><td class="k">protocol</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">protocol_commit</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">provenance_image</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">provenance_image_digest</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">raw_bytes</td><td class="v">6407</td></tr>
-<tr><td class="k">receipt_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">receipt_key_algos</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">receipt_key_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">release_bundle</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">release_id</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">repo_commit</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">repo_url</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">report_data</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">response_sha256</td><td class="v">0a35743daaaa44614158bf12176f097a5bef097160dd1cc795ce8dd0ec2570b0</td></tr>
-<tr><td class="k">schema_version</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">scope</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">serving_leaf_sha256</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">serving_role</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">signature_error</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">signature_valid</td><td class="v">true</td></tr>
-<tr><td class="k">snp_report_data</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">snp_tcb</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tcb_reference</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tcb_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tcb_version</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tee_type</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_binding_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_binding_domains</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_binding_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_error</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_group</td><td class="v">X25519MLKEM768</td></tr>
-<tr><td class="k">tls_pq</td><td class="v">hybrid</td></tr>
-<tr><td class="k">tls_spki_fingerprint</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">vcek_present</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">vendor</td><td class="v">ppq</td></tr>
-<tr><td class="k">workload</td><td class="v">inference</td></tr>
-<tr><td class="k">workload_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">workload_digests</td><td class="v faint">&mdash;</td></tr>
+<h4>Every field recorded <span class="note">16 with a value, 60 empty</span></h4>
+<table class="kv fields">
+<tr><td class="k">cert spki der bytes<span class="raw">cert_spki_der_bytes</span></td><td class="v">124</td></tr>
+<tr><td class="k">cert SPKI<span class="raw">cert_spki_sha256</span></td><td class="v">642eda68cc9e0c91be6c029590f00129f8ad069746618c646373937a9cccde39</td></tr>
+<tr><td class="k">doc bytes<span class="raw">doc_bytes</span></td><td class="v">4526</td></tr>
+<tr><td class="k">document format<span class="raw">doc_format</span></td><td class="v">nsm-cose-sign1</td></tr>
+<tr><td class="k">hpke key present<span class="raw">hpke_key_present</span></td><td class="v">yes</td></tr>
+<tr><td class="k">http status<span class="raw">http_status</span></td><td class="v">200</td></tr>
+<tr><td class="k">measurement<span class="raw">measurement</span></td><td class="v">2cd8efe0ab0d7b2cff71453b05402fce98bab4ca48700fd60af1f848e3f0e8b9</td></tr>
+<tr><td class="k">observed at<span class="raw">observed_at</span></td><td class="v">2026-10-08T21:56:10+00:00</td></tr>
+<tr><td class="k">platform<span class="raw">platform</span></td><td class="v">aws-nitro</td></tr>
+<tr><td class="k">raw bytes<span class="raw">raw_bytes</span></td><td class="v">6407</td></tr>
+<tr><td class="k">response sha256<span class="raw">response_sha256</span></td><td class="v">0a35743daaaa44614158bf12176f097a5bef097160dd1cc795ce8dd0ec2570b0</td></tr>
+<tr><td class="k">signature valid<span class="raw">signature_valid</span></td><td class="v">true</td></tr>
+<tr><td class="k">tls group<span class="raw">tls_group</span></td><td class="v">X25519MLKEM768</td></tr>
+<tr><td class="k">tls pq<span class="raw">tls_pq</span></td><td class="v">hybrid</td></tr>
+<tr><td class="k">vendor<span class="raw">vendor</span></td><td class="v">ppq</td></tr>
+<tr><td class="k">workload<span class="raw">workload</span></td><td class="v">inference</td></tr>
 </table>
+<p class="empty">Empty this run: app id collateral count crypto material hash device evidence hash e2ee key algos e2ee key count e2ee versions event names freshness bound freshness note frontdoor mode frontdoor platform gpu count gpu evidence count gpu evidence reason hpke public key key custody provider keyset digest keyset not after mesh ca KMS measurement nonce note nvidia arch nvidia evidence count operational status operator key status operator keyset sha256 OS image hash attestation protocol protocol commit provenance image provenance image digest receipt count receipt key algos receipt key count release bundle release source commit repo url report data schema version scope serving leaf sha256 serving role signature error snp report data snp tcb TDX module tcb status TCB SVN tee type tls binding count tls binding domains tls binding status tls error tls spki fingerprint vcek present workload count workload digests</p>
 </div></details>
 <p class="empty">To check a row: open <em>re-fetch</em>, save the response, and compare its SHA-256 with the hash above.</p>
 <h3>Changes</h3>
@@ -551,7 +413,7 @@ footer a{color:var(--text-dim)}
 <p class="headline first">first observed <span class="stamp">2026-10-08T21:56:10</span> &mdash; one observation, so there is nothing to compare against yet</p>
 <h3>Observations <span class="note">1 recorded, newest first. Open one to see every field that run recorded.</span></h3>
 <details class="obs">
-<summary><span class="when">2026-10-08T21:56:10</span><span class="ok">http 200</span><span class="ident">0637b3d506c80c0328c84697</span><span class="end"></span></summary>
+<summary><span class="when">2026-10-08T21:56:10</span><span class="ok">http 200</span><span class="ident">0637b3d506c80c0328c84697</span><span class="end"><span class="opener">77 fields</span></span></summary>
 <div class="body">
 <div class="facts"><span class="fact good">quote signature <b>verified</b></span><span class="fact good">tcb <b>0b01050000000000</b></span><span class="fact good">freshness <b>bound</b></span><span class="fact good">key exchange <b>X25519MLKEM768</b></span></div>
 <p class="note">source <span class="mono">https://api.redpill.ai/v1/attestation/report</span> <a class="recheck" href="https://api.redpill.ai/v1/attestation/report">endpoint &rarr;</a><br><span class="recheck-note">not re-fetchable: this response was bound to a single-use challenge, so the same URL now returns 409</span></p>
@@ -568,7 +430,7 @@ footer a{color:var(--text-dim)}
 <tr><td class="m">GPU evidence consistency</td><td><span class="g g-good">good</span></td><td class="m">corroborated</td></tr>
 </table>
 <h4>Measured surface <span class="note">13 of 28 fields published</span></h4>
-<table class="kv">
+<table class="kv surface">
 <tr><td class="k">serving role</td><td class="v">aggregator</td></tr>
 <tr><td class="k">platform</td><td class="v">tdx</td></tr>
 <tr><td class="k">tee type</td><td class="v">tdx</td></tr>
@@ -583,85 +445,46 @@ footer a{color:var(--text-dim)}
 <tr><td class="k">source commit</td><td class="v">8d0a666a2418898a8c823a9af49a634edd122a64</td></tr>
 <tr><td class="k">measured boot events</td><td class="v">app-id,boot-mr-done,compose-hash,instance-id,key-provider,mr-kms,os-image-hash,storage-fs,system-preparing,system-ready</td></tr>
 </table>
-<h4>Every field recorded</h4>
-<table>
-<tr><td class="k">app_id</td><td class="v">fdb7a14e5a6675f752e2cb69c9067a98ca402918</td></tr>
-<tr><td class="k">cert_spki_der_bytes</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">cert_spki_sha256</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">collateral_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">crypto_material_hash</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">device_evidence_hash</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">doc_bytes</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">doc_format</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">e2ee_key_algos</td><td class="v">secp256k1-aes-256-gcm-hkdf-sha256,x25519-aes-256-gcm-hkdf-sha256</td></tr>
-<tr><td class="k">e2ee_key_count</td><td class="v">2</td></tr>
-<tr><td class="k">e2ee_versions</td><td class="v">2</td></tr>
-<tr><td class="k">event_names</td><td class="v">app-id,boot-mr-done,compose-hash,instance-id,key-provider,mr-kms,os-image-hash,storage-fs,system-preparing,system-ready</td></tr>
-<tr><td class="k">freshness_bound</td><td class="v">true</td></tr>
-<tr><td class="k">freshness_note</td><td class="v">quote report_data carries the challenge sent this run</td></tr>
-<tr><td class="k">frontdoor_mode</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">frontdoor_platform</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">gpu_count</td><td class="v">0</td></tr>
-<tr><td class="k">gpu_evidence_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">gpu_evidence_reason</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">hpke_key_present</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">hpke_public_key</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">http_status</td><td class="v">200</td></tr>
-<tr><td class="k">key_custody_provider</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">keyset_digest</td><td class="v">sha256:ef8a03c0c5e349310394c0d5865f766f8a1258f1acdb5fcb6ed2ebcd757e5f5a</td></tr>
-<tr><td class="k">keyset_not_after</td><td class="v">1792250755</td></tr>
-<tr><td class="k">measurement</td><td class="v">0637b3d506c80c0328c84697c290f5fb7eef811c8d022124e04ee9b0f5f99567</td></tr>
-<tr><td class="k">mesh_ca</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">mr_kms</td><td class="v">692afc6d7a86a32cfc1ebd9cad1a576aab012bab46986ba609bc8d6407270572</td></tr>
-<tr><td class="k">nonce</td><td class="v">29cc399ce9e2ffbdc81b415dc7297c8a36dc1d27993a8b00130516571120dfb1</td></tr>
-<tr><td class="k">note</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">nvidia_arch</td><td class="v">HOPPER</td></tr>
-<tr><td class="k">nvidia_evidence_count</td><td class="v">0</td></tr>
-<tr><td class="k">observed_at</td><td class="v">2026-10-08T21:56:10+00:00</td></tr>
-<tr><td class="k">operational_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">operator_key_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">operator_keyset_sha256</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">os_image_hash</td><td class="v">bd369a8c2f9edb2b52dad48ac8e0b32dde5f1337c423a506b48d07403a7d8033</td></tr>
-<tr><td class="k">platform</td><td class="v">tdx</td></tr>
-<tr><td class="k">protocol</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">protocol_commit</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">provenance_image</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">provenance_image_digest</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">raw_bytes</td><td class="v">124370</td></tr>
-<tr><td class="k">receipt_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">receipt_key_algos</td><td class="v">ed25519</td></tr>
-<tr><td class="k">receipt_key_count</td><td class="v">1</td></tr>
-<tr><td class="k">release_bundle</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">release_id</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">repo_commit</td><td class="v">8d0a666a2418898a8c823a9af49a634edd122a64</td></tr>
-<tr><td class="k">repo_url</td><td class="v">https://github.com/Dstack-TEE/private-ai-gateway.git</td></tr>
-<tr><td class="k">report_data</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">response_sha256</td><td class="v">fdbb3848a2fd8c355c39fe9f74fb35f230c847286bfc8c9f16948d545d565092</td></tr>
-<tr><td class="k">schema_version</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">scope</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">serving_leaf_sha256</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">serving_role</td><td class="v">aggregator</td></tr>
-<tr><td class="k">signature_error</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">signature_valid</td><td class="v">true</td></tr>
-<tr><td class="k">snp_report_data</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">snp_tcb</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tcb_reference</td><td class="v">7bf063280e94fb051f5dd7b1fc59ce9aac42bb961df8d44b709c9b0ff87a7b4df648657ba6d1189589feab1d5a3c9a9d</td></tr>
-<tr><td class="k">tcb_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tcb_version</td><td class="v">0b010500000000000000000000000000</td></tr>
-<tr><td class="k">tee_type</td><td class="v">tdx</td></tr>
-<tr><td class="k">tls_binding_count</td><td class="v">4</td></tr>
-<tr><td class="k">tls_binding_domains</td><td class="v">api.redpill.ai,inference.phala.com,openrouter.phala.com,tee.redpill.ai</td></tr>
-<tr><td class="k">tls_binding_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_error</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_group</td><td class="v">X25519MLKEM768</td></tr>
-<tr><td class="k">tls_pq</td><td class="v">hybrid</td></tr>
-<tr><td class="k">tls_spki_fingerprint</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">vcek_present</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">vendor</td><td class="v">redpill</td></tr>
-<tr><td class="k">workload</td><td class="v">gateway</td></tr>
-<tr><td class="k">workload_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">workload_digests</td><td class="v faint">&mdash;</td></tr>
+<h4>Every field recorded <span class="note">36 with a value, 40 empty</span></h4>
+<table class="kv fields">
+<tr><td class="k">app id<span class="raw">app_id</span></td><td class="v">fdb7a14e5a6675f752e2cb69c9067a98ca402918</td></tr>
+<tr><td class="k">e2ee key algos<span class="raw">e2ee_key_algos</span></td><td class="v">secp256k1-aes-256-gcm-hkdf-sha256,x25519-aes-256-gcm-hkdf-sha256</td></tr>
+<tr><td class="k">e2ee key count<span class="raw">e2ee_key_count</span></td><td class="v">2</td></tr>
+<tr><td class="k">e2ee versions<span class="raw">e2ee_versions</span></td><td class="v">2</td></tr>
+<tr><td class="k">event names<span class="raw">event_names</span></td><td class="v">app-id,boot-mr-done,compose-hash,instance-id,key-provider,mr-kms,os-image-hash,storage-fs,system-preparing,system-ready</td></tr>
+<tr><td class="k">freshness bound<span class="raw">freshness_bound</span></td><td class="v">true</td></tr>
+<tr><td class="k">freshness note<span class="raw">freshness_note</span></td><td class="v">quote report_data carries the challenge sent this run</td></tr>
+<tr><td class="k">gpu count<span class="raw">gpu_count</span></td><td class="v">0</td></tr>
+<tr><td class="k">http status<span class="raw">http_status</span></td><td class="v">200</td></tr>
+<tr><td class="k">keyset digest<span class="raw">keyset_digest</span></td><td class="v">sha256:ef8a03c0c5e349310394c0d5865f766f8a1258f1acdb5fcb6ed2ebcd757e5f5a</td></tr>
+<tr><td class="k">keyset not after<span class="raw">keyset_not_after</span></td><td class="v">1792250755</td></tr>
+<tr><td class="k">measurement<span class="raw">measurement</span></td><td class="v">0637b3d506c80c0328c84697c290f5fb7eef811c8d022124e04ee9b0f5f99567</td></tr>
+<tr><td class="k">KMS measurement<span class="raw">mr_kms</span></td><td class="v">692afc6d7a86a32cfc1ebd9cad1a576aab012bab46986ba609bc8d6407270572</td></tr>
+<tr><td class="k">nonce<span class="raw">nonce</span></td><td class="v">29cc399ce9e2ffbdc81b415dc7297c8a36dc1d27993a8b00130516571120dfb1</td></tr>
+<tr><td class="k">nvidia arch<span class="raw">nvidia_arch</span></td><td class="v">HOPPER</td></tr>
+<tr><td class="k">nvidia evidence count<span class="raw">nvidia_evidence_count</span></td><td class="v">0</td></tr>
+<tr><td class="k">observed at<span class="raw">observed_at</span></td><td class="v">2026-10-08T21:56:10+00:00</td></tr>
+<tr><td class="k">OS image hash<span class="raw">os_image_hash</span></td><td class="v">bd369a8c2f9edb2b52dad48ac8e0b32dde5f1337c423a506b48d07403a7d8033</td></tr>
+<tr><td class="k">platform<span class="raw">platform</span></td><td class="v">tdx</td></tr>
+<tr><td class="k">raw bytes<span class="raw">raw_bytes</span></td><td class="v">124370</td></tr>
+<tr><td class="k">receipt key algos<span class="raw">receipt_key_algos</span></td><td class="v">ed25519</td></tr>
+<tr><td class="k">receipt key count<span class="raw">receipt_key_count</span></td><td class="v">1</td></tr>
+<tr><td class="k">source commit<span class="raw">repo_commit</span></td><td class="v">8d0a666a2418898a8c823a9af49a634edd122a64</td></tr>
+<tr><td class="k">repo url<span class="raw">repo_url</span></td><td class="v">https://github.com/Dstack-TEE/private-ai-gateway.git</td></tr>
+<tr><td class="k">response sha256<span class="raw">response_sha256</span></td><td class="v">fdbb3848a2fd8c355c39fe9f74fb35f230c847286bfc8c9f16948d545d565092</td></tr>
+<tr><td class="k">serving role<span class="raw">serving_role</span></td><td class="v">aggregator</td></tr>
+<tr><td class="k">signature valid<span class="raw">signature_valid</span></td><td class="v">true</td></tr>
+<tr><td class="k">TDX module<span class="raw">tcb_reference</span></td><td class="v">7bf063280e94fb051f5dd7b1fc59ce9aac42bb961df8d44b709c9b0ff87a7b4df648657ba6d1189589feab1d5a3c9a9d</td></tr>
+<tr><td class="k">TCB SVN<span class="raw">tcb_version</span></td><td class="v">0b010500000000000000000000000000</td></tr>
+<tr><td class="k">tee type<span class="raw">tee_type</span></td><td class="v">tdx</td></tr>
+<tr><td class="k">tls binding count<span class="raw">tls_binding_count</span></td><td class="v">4</td></tr>
+<tr><td class="k">tls binding domains<span class="raw">tls_binding_domains</span></td><td class="v">api.redpill.ai,inference.phala.com,openrouter.phala.com,tee.redpill.ai</td></tr>
+<tr><td class="k">tls group<span class="raw">tls_group</span></td><td class="v">X25519MLKEM768</td></tr>
+<tr><td class="k">tls pq<span class="raw">tls_pq</span></td><td class="v">hybrid</td></tr>
+<tr><td class="k">vendor<span class="raw">vendor</span></td><td class="v">redpill</td></tr>
+<tr><td class="k">workload<span class="raw">workload</span></td><td class="v">gateway</td></tr>
 </table>
+<p class="empty">Empty this run: cert spki der bytes cert SPKI collateral count crypto material hash device evidence hash doc bytes document format frontdoor mode frontdoor platform gpu evidence count gpu evidence reason hpke key present hpke public key key custody provider mesh ca note operational status operator key status operator keyset sha256 attestation protocol protocol commit provenance image provenance image digest receipt count release bundle release report data schema version scope serving leaf sha256 signature error snp report data snp tcb tcb status tls binding status tls error tls spki fingerprint vcek present workload count workload digests</p>
 </div></details>
 <p class="empty">To check a row: open <em>re-fetch</em>, save the response, and compare its SHA-256 with the hash above.</p>
 <h3>Changes</h3>
@@ -673,7 +496,7 @@ footer a{color:var(--text-dim)}
 <p class="headline first">first observed <span class="stamp">2026-10-08T21:56:10</span> &mdash; one observation, so there is nothing to compare against yet</p>
 <h3>Observations <span class="note">1 recorded, newest first. Open one to see every field that run recorded.</span></h3>
 <details class="obs">
-<summary><span class="when">2026-10-08T21:56:10</span><span class="ok">http 200</span><span class="ident">b3be62c7199d8e4d24f130e5</span><span class="end"></span></summary>
+<summary><span class="when">2026-10-08T21:56:10</span><span class="ok">http 200</span><span class="ident">b3be62c7199d8e4d24f130e5</span><span class="end"><span class="opener">77 fields</span></span></summary>
 <div class="body">
 <div class="facts"><span class="fact none">quote signature <b>not attempted</b></span><span class="fact good">tcb <b>10.0.23.84</b></span><span class="fact good">freshness <b>bound</b></span><span class="fact good">key exchange <b>X25519MLKEM768</b></span></div>
 <p class="note">source <span class="mono">https://inference.tinfoil.sh/.well-known/tinfoil-attestation</span> <a class="recheck" href="https://inference.tinfoil.sh/.well-known/tinfoil-attestation">endpoint &rarr;</a><br><span class="recheck-note">not re-fetchable: this response was bound to a single-use challenge, so the same URL now returns 409</span></p>
@@ -690,90 +513,41 @@ footer a{color:var(--text-dim)}
 <tr><td class="m">GPU evidence consistency</td><td><span class="g g-unverifiable">unverifiable</span></td><td class="m">unknown</td></tr>
 </table>
 <h4>Measured surface <span class="note">3 of 28 fields published</span></h4>
-<table class="kv">
+<table class="kv surface">
 <tr><td class="k">platform</td><td class="v">amd-sev-snp</td></tr>
 <tr><td class="k">TLS bindings</td><td class="v">2</td></tr>
 <tr><td class="k">GPU evidence attached</td><td class="v">none published (the document&#x27;s device_evidence set is empty)</td></tr>
 </table>
-<h4>Every field recorded</h4>
-<table>
-<tr><td class="k">app_id</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">cert_spki_der_bytes</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">cert_spki_sha256</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">collateral_count</td><td class="v">6</td></tr>
-<tr><td class="k">crypto_material_hash</td><td class="v">99da58334ded60be78981d9b8786871ad1a7d37e55f20430a6ab7622b0526b25</td></tr>
-<tr><td class="k">device_evidence_hash</td><td class="v">5e84f632e01293bff4596cf72c45de0f9e1037e5cda3232b850c478d1a6b592b</td></tr>
-<tr><td class="k">doc_bytes</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">doc_format</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">e2ee_key_algos</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">e2ee_key_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">e2ee_versions</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">event_names</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">freshness_bound</td><td class="v">true</td></tr>
-<tr><td class="k">freshness_note</td><td class="v">report_data recomputed from the published derivation and matched, so the quote commits to the published key material</td></tr>
-<tr><td class="k">frontdoor_mode</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">frontdoor_platform</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">gpu_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">gpu_evidence_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">gpu_evidence_reason</td><td class="v">the document&#x27;s device_evidence set is empty</td></tr>
-<tr><td class="k">hpke_key_present</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">hpke_public_key</td><td class="v">6fbc650af5c0aac5adb635309ea70c95885ca72d0bb6c3be7cb478b90ab36108</td></tr>
-<tr><td class="k">http_status</td><td class="v">200</td></tr>
-<tr><td class="k">key_custody_provider</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">keyset_digest</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">keyset_not_after</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">measurement</td><td class="v">b3be62c7199d8e4d24f130e5651bdc8a62a2532f72c7e87c986bec54bf5f90bab703ad4dbfc5e45bfd385f8972dfc66c00000000000000000000000000000000</td></tr>
-<tr><td class="k">mesh_ca</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">mr_kms</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">nonce</td><td class="v">798dc426288e6e3aab9026bf834713741e455bae9952e49c53219988546db953</td></tr>
-<tr><td class="k">note</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">nvidia_arch</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">nvidia_evidence_count</td><td class="v">0</td></tr>
-<tr><td class="k">observed_at</td><td class="v">2026-10-08T21:56:10+00:00</td></tr>
-<tr><td class="k">operational_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">operator_key_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">operator_keyset_sha256</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">os_image_hash</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">platform</td><td class="v">amd-sev-snp</td></tr>
-<tr><td class="k">protocol</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">protocol_commit</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">provenance_image</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">provenance_image_digest</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">raw_bytes</td><td class="v">81036</td></tr>
-<tr><td class="k">receipt_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">receipt_key_algos</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">receipt_key_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">release_bundle</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">release_id</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">repo_commit</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">repo_url</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">report_data</td><td class="v">3c5a046cda38a5e6310ac7013c2fa6614af216b6b3fb18391aa5bf78c24c21eb0000000000000000000000000000000000000000000000000000000000000000</td></tr>
-<tr><td class="k">response_sha256</td><td class="v">6225d495dd7be1ea1fd5756ac87b3f3ed248fe4e6455cdd077b8dafef5f39f01</td></tr>
-<tr><td class="k">schema_version</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">scope</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">serving_leaf_sha256</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">serving_role</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">signature_error</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">signature_valid</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">snp_report_data</td><td class="v">3c5a046cda38a5e6310ac7013c2fa6614af216b6b3fb18391aa5bf78c24c21eb0000000000000000000000000000000000000000000000000000000000000000</td></tr>
-<tr><td class="k">snp_tcb</td><td class="v">10.0.23.84</td></tr>
-<tr><td class="k">tcb_reference</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tcb_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tcb_version</td><td class="v">10.0.23.84</td></tr>
-<tr><td class="k">tee_type</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_binding_count</td><td class="v">2</td></tr>
-<tr><td class="k">tls_binding_domains</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_binding_status</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_error</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">tls_group</td><td class="v">X25519MLKEM768</td></tr>
-<tr><td class="k">tls_pq</td><td class="v">hybrid</td></tr>
-<tr><td class="k">tls_spki_fingerprint</td><td class="v">2ac79995464edfb139b34e4ee6269f38d0ab63da92b1a431170dec3bdd0c7c84</td></tr>
-<tr><td class="k">vcek_present</td><td class="v">true</td></tr>
-<tr><td class="k">vendor</td><td class="v">tinfoil</td></tr>
-<tr><td class="k">workload</td><td class="v">inference</td></tr>
-<tr><td class="k">workload_count</td><td class="v faint">&mdash;</td></tr>
-<tr><td class="k">workload_digests</td><td class="v faint">&mdash;</td></tr>
+<h4>Every field recorded <span class="note">26 with a value, 50 empty</span></h4>
+<table class="kv fields">
+<tr><td class="k">collateral count<span class="raw">collateral_count</span></td><td class="v">6</td></tr>
+<tr><td class="k">crypto material hash<span class="raw">crypto_material_hash</span></td><td class="v">99da58334ded60be78981d9b8786871ad1a7d37e55f20430a6ab7622b0526b25</td></tr>
+<tr><td class="k">device evidence hash<span class="raw">device_evidence_hash</span></td><td class="v">5e84f632e01293bff4596cf72c45de0f9e1037e5cda3232b850c478d1a6b592b</td></tr>
+<tr><td class="k">freshness bound<span class="raw">freshness_bound</span></td><td class="v">true</td></tr>
+<tr><td class="k">freshness note<span class="raw">freshness_note</span></td><td class="v">report_data recomputed from the published derivation and matched, so the quote commits to the published key material</td></tr>
+<tr><td class="k">gpu evidence reason<span class="raw">gpu_evidence_reason</span></td><td class="v">the document&#x27;s device_evidence set is empty</td></tr>
+<tr><td class="k">hpke public key<span class="raw">hpke_public_key</span></td><td class="v">6fbc650af5c0aac5adb635309ea70c95885ca72d0bb6c3be7cb478b90ab36108</td></tr>
+<tr><td class="k">http status<span class="raw">http_status</span></td><td class="v">200</td></tr>
+<tr><td class="k">measurement<span class="raw">measurement</span></td><td class="v">b3be62c7199d8e4d24f130e5651bdc8a62a2532f72c7e87c986bec54bf5f90bab703ad4dbfc5e45bfd385f8972dfc66c00000000000000000000000000000000</td></tr>
+<tr><td class="k">nonce<span class="raw">nonce</span></td><td class="v">798dc426288e6e3aab9026bf834713741e455bae9952e49c53219988546db953</td></tr>
+<tr><td class="k">nvidia evidence count<span class="raw">nvidia_evidence_count</span></td><td class="v">0</td></tr>
+<tr><td class="k">observed at<span class="raw">observed_at</span></td><td class="v">2026-10-08T21:56:10+00:00</td></tr>
+<tr><td class="k">platform<span class="raw">platform</span></td><td class="v">amd-sev-snp</td></tr>
+<tr><td class="k">raw bytes<span class="raw">raw_bytes</span></td><td class="v">81036</td></tr>
+<tr><td class="k">report data<span class="raw">report_data</span></td><td class="v">3c5a046cda38a5e6310ac7013c2fa6614af216b6b3fb18391aa5bf78c24c21eb0000000000000000000000000000000000000000000000000000000000000000</td></tr>
+<tr><td class="k">response sha256<span class="raw">response_sha256</span></td><td class="v">6225d495dd7be1ea1fd5756ac87b3f3ed248fe4e6455cdd077b8dafef5f39f01</td></tr>
+<tr><td class="k">snp report data<span class="raw">snp_report_data</span></td><td class="v">3c5a046cda38a5e6310ac7013c2fa6614af216b6b3fb18391aa5bf78c24c21eb0000000000000000000000000000000000000000000000000000000000000000</td></tr>
+<tr><td class="k">snp tcb<span class="raw">snp_tcb</span></td><td class="v">10.0.23.84</td></tr>
+<tr><td class="k">TCB SVN<span class="raw">tcb_version</span></td><td class="v">10.0.23.84</td></tr>
+<tr><td class="k">tls binding count<span class="raw">tls_binding_count</span></td><td class="v">2</td></tr>
+<tr><td class="k">tls group<span class="raw">tls_group</span></td><td class="v">X25519MLKEM768</td></tr>
+<tr><td class="k">tls pq<span class="raw">tls_pq</span></td><td class="v">hybrid</td></tr>
+<tr><td class="k">tls spki fingerprint<span class="raw">tls_spki_fingerprint</span></td><td class="v">2ac79995464edfb139b34e4ee6269f38d0ab63da92b1a431170dec3bdd0c7c84</td></tr>
+<tr><td class="k">vcek present<span class="raw">vcek_present</span></td><td class="v">true</td></tr>
+<tr><td class="k">vendor<span class="raw">vendor</span></td><td class="v">tinfoil</td></tr>
+<tr><td class="k">workload<span class="raw">workload</span></td><td class="v">inference</td></tr>
 </table>
+<p class="empty">Empty this run: app id cert spki der bytes cert SPKI doc bytes document format e2ee key algos e2ee key count e2ee versions event names frontdoor mode frontdoor platform gpu count gpu evidence count hpke key present key custody provider keyset digest keyset not after mesh ca KMS measurement note nvidia arch operational status operator key status operator keyset sha256 OS image hash attestation protocol protocol commit provenance image provenance image digest receipt count receipt key algos receipt key count release bundle release source commit repo url schema version scope serving leaf sha256 serving role signature error signature valid TDX module tcb status tee type tls binding domains tls binding status tls error workload count workload digests</p>
 </div></details>
 <p class="empty">To check a row: open <em>re-fetch</em>, save the response, and compare its SHA-256 with the hash above.</p>
 <h3>Changes</h3>

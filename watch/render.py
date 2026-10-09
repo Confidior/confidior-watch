@@ -245,6 +245,11 @@ tr:last-child td{{border-bottom:none}}
   letter-spacing:.08em;color:var(--text-mute);margin:16px 0 8px;font-weight:600}}
 .obs .facts{{margin:0 0 4px}}
 .obs table.kv td.k{{width:38%}}
+.obs .opener{{font-family:var(--mono);font-size:.72rem;color:var(--accent);
+  border:1px solid var(--accent-dim);background:var(--accent-dim);
+  border-radius:999px;padding:2px 9px;white-space:nowrap}}
+.obs .raw{{display:block;font-family:var(--mono);font-size:.62rem;
+  color:var(--text-faint);opacity:.7;letter-spacing:.02em}}
 .obs pre.blob{{margin:0 0 10px;padding:10px 12px;background:var(--bg-input);
   border:1px solid var(--line);border-radius:var(--radius-sm);
   font-family:var(--mono);font-size:.72rem;color:var(--text-dim);
@@ -543,6 +548,38 @@ def _surface_row(row: dict[str, Any]) -> list[tuple[str, str]]:
     return out
 
 
+def _human_label(key: str) -> str:
+    """A field name a reader can scan, falling back to the key with its
+    underscores opened up so an unmapped field is still legible."""
+    return FIELD_LABELS.get(key) or key.replace("_", " ")
+
+
+def _field_dump(row: dict[str, Any]) -> tuple[list[tuple[str, str]], list[str], list[tuple[str, str]]]:
+    """Every field the run recorded, split so the page stays legible.
+
+    Returns (filled, empty, blobs). The run stores about 77 fields and most are
+    empty for any given source; printing them all as rows of a dash buries the
+    values that matter. So values get rows, and the fields the run left empty
+    get named together on one line, which is itself a fact worth reading.
+    """
+    filled: list[tuple[str, str]] = []
+    empty: list[str] = []
+    blobs: list[tuple[str, str]] = []
+    for key in sorted(row):
+        if key == "source_url":
+            # The endpoint is stated above with its re-fetch affordance.
+            # Printing the raw URL would put the per-run nonce back on the page.
+            continue
+        value = row.get(key)
+        if key == "workload_digests" and value:
+            blobs.append((key, str(value)))
+        elif value is None or value == "":
+            empty.append(key)
+        else:
+            filled.append((key, str(value)))
+    return filled, empty, blobs
+
+
 def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
     groups = by_vendor(records)
     heartbeats = [r for r in records if r.get("vendor") == "__heartbeat__"]
@@ -702,7 +739,8 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
                 f'<span class="ident">{html.escape(ident[:24]) if ident else "no identity"}</span>'
                 '<span class="end">'
                 + (f'<span class="chip chip-red">{html.escape(note)}</span>' if note else "")
-                + "</span></summary>"
+                + f'<span class="opener">{len(row)} fields</span>'
+                "</span></summary>"
             )
             parts.append('<div class="body">')
 
@@ -734,7 +772,7 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
                 "fields published</span></h4>"
             )
             if surface:
-                parts.append('<table class="kv">')
+                parts.append('<table class="kv surface">')
                 for name, value in surface:
                     parts.append(
                         f'<tr><td class="k">{html.escape(name)}</td>'
@@ -747,38 +785,33 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
                     "observation.</p>"
                 )
 
-            parts.append('<h4>Every field recorded</h4>')
-            parts.append("<table>")
-            for key in sorted(row):
-                value = row.get(key)
-                if key == "source_url":
-                    # The endpoint is already stated above with its re-fetch
-                    # affordance. Printing the raw URL here would put the
-                    # per-run nonce back on the page, which the log strips on
-                    # purpose.
-                    continue
-                if key == "workload_digests" and value:
-                    # A 15-entry JSON blob wrapped in a table cell overflows the
-                    # row and stops being readable. It gets the full-width
-                    # block the row already had.
-                    parts.append("</table>")
-                    parts.append(
-                        '<p class="note">workload digests</p>'
-                        f'<pre class="blob">{html.escape(str(value))}</pre>'
-                    )
-                    parts.append("<table>")
-                    continue
-                if value is None or value == "":
-                    value = "&mdash;"
-                    vcls = "v faint"
-                else:
-                    value = html.escape(str(value))
-                    vcls = "v"
+            filled, empty, blobs = _field_dump(row)
+            parts.append(
+                f'<h4>Every field recorded <span class="note">{len(filled)} with a '
+                f"value, {len(empty)} empty</span></h4>"
+            )
+            for key, blob in blobs:
                 parts.append(
-                    f'<tr><td class="k">{html.escape(key)}</td>'
-                    f'<td class="{vcls}">{value}</td></tr>'
+                    f'<p class="note">{html.escape(_human_label(key))}</p>'
+                    f'<pre class="blob">{html.escape(blob)}</pre>'
+                )
+            parts.append('<table class="kv fields">')
+            for key, value in filled:
+                parts.append(
+                    f'<tr><td class="k">{html.escape(_human_label(key))}'
+                    f'<span class="raw">{html.escape(key)}</span></td>'
+                    f'<td class="v">{html.escape(value)}</td></tr>'
                 )
             parts.append("</table>")
+            if empty:
+                # Named, not hidden. A field the run left empty is a fact about
+                # what this provider publishes, and it is what the "n of 28
+                # fields" count above is made of.
+                parts.append(
+                    '<p class="empty">Empty this run: '
+                    + " ".join(html.escape(_human_label(k)) for k in empty)
+                    + "</p>"
+                )
             parts.append("</div></details>")
         parts.append(
             '<p class="empty">To check a row: open <em>re-fetch</em>, save the response, '

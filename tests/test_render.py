@@ -223,9 +223,9 @@ def test_collapsible_body_carries_every_field_recorded():
     rows = [rec("v", "t1", measurement="m", some_obscure_field="kept",
                 source_url="https://api.example/x")]
     html = render(rows, generated_at="t")
-    assert '<td class="k">some_obscure_field</td>' in html
+    assert '<span class="raw">some_obscure_field</span>' in html
     assert "kept" in html
-    assert '<td class="k">source_url</td>' not in html
+    assert '<span class="raw">source_url</span>' not in html
 
 
 def test_newest_observation_is_first_on_the_page():
@@ -273,7 +273,7 @@ def test_each_observation_carries_its_own_surface_not_the_newest_one():
     assert html.count("Measured surface") == 2
 
     # Each curated surface table carries that observation's own value.
-    surfaces = re.findall(r'<table class="kv">(.*?)</table>', html, re.S)
+    surfaces = re.findall(r'<table class="kv surface">(.*?)</table>', html, re.S)
     assert len(surfaces) == 2
     rendered = [
         {k: v for k, v in re.findall(
@@ -340,7 +340,40 @@ def test_every_recorded_field_appears_in_its_collapsible():
     keys = {"measurement": "m", "tls_group": "X25519", "weird_key": "w"}
     html = render([rec("v", "t1", **keys)], generated_at="t")
     for key in keys:
-        assert f'<td class="k">{key}</td>' in html
+        # Each field is labelled, and carries its raw key for a reader who
+        # wants the record's own spelling.
+        assert f'<span class="raw">{key}</span>' in html
+    assert '<pre class="blob">' not in html
+
+
+def test_empty_fields_are_named_not_printed_as_a_wall_of_dashes():
+    """A run leaves most of its 77 fields empty. Printing each as a row with an
+    em dash buries the values that matter; naming them together keeps the count
+    legible and the fields still visible."""
+    row = rec("v", "t1", measurement="m")
+    row["some_empty_field"] = ""
+    html = render([row], generated_at="t")
+    assert "Empty this run:" in html
+    assert "some empty field" in html
+    # And not as a value row with a placeholder.
+    assert '<td class="k">some empty field<span class="raw">some_empty_field</span></td><td class="v">&mdash;</td>' not in html
+
+
+def test_the_collapsed_line_says_how_much_is_inside():
+    """The page read as empty because every section moved inside a closed
+    dropdown. The summary line now advertises what opening it shows."""
+    html = render([rec("v", "t1", measurement="m")], generated_at="t")
+    assert 'class="opener"' in html
+    assert "fields</span>" in html
+
+
+def test_surface_tables_are_distinguishable_from_field_dumps():
+    """Both are key/value tables, so they carry different classes: one is the
+    curated surface, the other the full record."""
+    rows = [rec("v", "t1", measurement="m", serving_role="aggregator")]
+    html = render(rows, generated_at="t")
+    assert html.count('<table class="kv surface">') == 1
+    assert html.count('<table class="kv fields">') == 1
 
 
 def test_not_readable_count_is_not_observations_minus_readable():
