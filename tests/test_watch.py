@@ -31,8 +31,7 @@ from watch.sources import (  # noqa: E402
 
 DSTACK_SAMPLE = {
     "api_version": "aci/1",
-    "workload_keyset_digest":
-        "sha256:ef8a03c0c5e349310394c0d5865f766f8a1258f1acdb5fcb6ed2ebcd757e5f5a",
+    "workload_keyset_digest": "sha256:ef8a03c0c5e349310394c0d5865f766f8a1258f1acdb5fcb6ed2ebcd757e5f5a",
     "attestation": {
         "tee_type": "tdx",
         "workload_keyset": {"not_after": 1792250755},
@@ -115,9 +114,10 @@ def test_parse_nsm_cose_counts_der_bytes_not_base64_characters():
     the key changes and can move when it does not."""
     der = bytes(range(91))  # a P-256 SPKI is 91 bytes
     encoded = base64.b64encode(der).decode()
-    (obs,) = parse_nsm_cose({"attestation_document_b64": "aGVsbG8gd29ybGQ=",
-                             "cert_spki_der": encoded})
-    assert len(encoded) != len(der)          # the two really do differ
+    (obs,) = parse_nsm_cose(
+        {"attestation_document_b64": "aGVsbG8gd29ybGQ=", "cert_spki_der": encoded}
+    )
+    assert len(encoded) != len(der)  # the two really do differ
     assert obs["cert_spki_der_bytes"] == str(len(der))
 
 

@@ -217,9 +217,9 @@ def test_gunzip_is_bounded_so_a_bomb_cannot_take_the_run_down():
     from watch.sources import MAX_DECOMPRESSED_BYTES, _gunzip_b64
 
     bomb = gzip.compress(b"\x00" * (4 * MAX_DECOMPRESSED_BYTES), 9)
-    assert len(bomb) < MAX_DECOMPRESSED_BYTES            # it really is small
+    assert len(bomb) < MAX_DECOMPRESSED_BYTES  # it really is small
     out = _gunzip_b64(b64.b64encode(bomb).decode())
-    assert len(out) == MAX_DECOMPRESSED_BYTES            # bounded, not 4x
+    assert len(out) == MAX_DECOMPRESSED_BYTES  # bounded, not 4x
 
 
 def test_gunzip_leaves_small_bodies_intact():
@@ -230,4 +230,4 @@ def test_gunzip_leaves_small_bodies_intact():
 
     raw = b'{"items": []}'
     assert _gunzip_b64(b64.b64encode(gzip.compress(raw)).decode()) == raw
-    assert _gunzip_b64(b64.b64encode(raw).decode()) == raw   # not gzipped
+    assert _gunzip_b64(b64.b64encode(raw).decode()) == raw  # not gzipped

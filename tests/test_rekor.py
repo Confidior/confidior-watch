@@ -78,8 +78,9 @@ def test_get_rekor_url_wraps_a_network_failure_as_rekor_error():
 
 
 def test_submit_entry_returns_the_entry_keyed_by_uuid():
-    out = submit_entry({"a": 1}, "https://rekor.example",
-                        poster=lambda _u, _b: {"uuid-1": {"logIndex": 7}})
+    out = submit_entry(
+        {"a": 1}, "https://rekor.example", poster=lambda _u, _b: {"uuid-1": {"logIndex": 7}}
+    )
     assert out["uuid"] == "uuid-1"
     assert out["logIndex"] == 7
 
@@ -108,7 +109,7 @@ def test_submit_entry_wraps_a_submission_failure_as_rekor_error():
 def test_ephemeral_cert_is_a_pem_certificate_not_a_key():
     key, pem = _make_ephemeral_ecdsa_cert()
     assert pem.startswith(b"-----BEGIN CERTIFICATE-----")
-    assert b"PRIVATE KEY" not in pem          # the key must not travel with it
+    assert b"PRIVATE KEY" not in pem  # the key must not travel with it
     assert key.key_size == 256
 
 
