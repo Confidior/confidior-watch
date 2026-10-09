@@ -254,8 +254,14 @@ def fetch(url: str, timeout: float = DEFAULT_TIMEOUT) -> tuple[int, bytes]:
         return 0, b""
 
 
-OBSERVATION_KEYS = set(RECORD_FIELDS) - {"observed_at", "vendor", "source_url",
-                                         "http_status", "response_sha256", "raw_bytes"}
+OBSERVATION_KEYS = set(RECORD_FIELDS) - {
+    "observed_at",
+    "vendor",
+    "source_url",
+    "http_status",
+    "response_sha256",
+    "raw_bytes",
+}
 
 
 def _nonce_of(url: str) -> str:
@@ -327,8 +333,9 @@ def collect(
                 check_fields["tls_group"] = group
                 check_fields["tls_error"] = err
                 check_fields["tls_pq"] = (
-                    "hybrid" if group and any(g in group for g in ("MLKEM",)) else
-                    ("classical" if group else "")
+                    "hybrid"
+                    if group and any(g in group for g in ("MLKEM",))
+                    else ("classical" if group else "")
                 )
             except Exception as e:  # noqa: BLE001
                 logger.warning("tls measurement failed for %s: %s", source.host, e)
@@ -393,7 +400,9 @@ def day_digest(paths: list[Path]) -> str:
     return h.hexdigest() if h.digest() != hashlib.sha256(b"").digest() else ""
 
 
-def anchor_digest_soft(digest: str, *, anchor: Callable[[str], dict[str, Any]] | None = None) -> dict[str, Any]:
+def anchor_digest_soft(
+    digest: str, *, anchor: Callable[[str], dict[str, Any]] | None = None
+) -> dict[str, Any]:
     """Anchor a digest, failing soft.
 
     An unanchored day is still a day of history; the anchor is what makes it

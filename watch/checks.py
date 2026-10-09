@@ -32,7 +32,6 @@ engine is absent. The checks are added value, not a dependency.
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import subprocess
@@ -92,6 +91,7 @@ def engine_available() -> bool:
         _ENGINE_READY = False
     return _ENGINE_READY
 
+
 #: Groups worth testing, strongest first. Offered explicitly so the answer is
 #: about what the endpoint *chooses* when given the option, not what the client
 #: happened to default to.
@@ -105,15 +105,15 @@ TLS_TIMEOUT = 20
 class Checks:
     """Per-observation verification results. Every field is optional by design."""
 
-    signature_valid: str = ""      # "true" / "false" / "" (not attempted)
+    signature_valid: str = ""  # "true" / "false" / "" (not attempted)
     signature_error: str = ""
     tcb_version: str = ""
-    tcb_status: str = ""           # current / outdated / unknown; never set today, no comparison is made
+    tcb_status: str = ""  # current / outdated / unknown; never set today, no comparison is made
     tcb_reference: str = ""
-    freshness_bound: str = ""      # "true" / "false" / ""
+    freshness_bound: str = ""  # "true" / "false" / ""
     freshness_note: str = ""
-    tls_group: str = ""            # what the endpoint negotiated when offered PQ
-    tls_pq: str = ""               # "hybrid" / "classical" / ""
+    tls_group: str = ""  # what the endpoint negotiated when offered PQ
+    tls_pq: str = ""  # "hybrid" / "classical" / ""
     tls_error: str = ""
 
     def as_fields(self) -> dict[str, str]:
@@ -255,10 +255,14 @@ def measure_tls_group(host: str, *, port: int = 443, runner: Any = None) -> tupl
     if not host:
         return "", "no host"
     cmd = [
-        "openssl", "s_client",
-        "-connect", f"{host}:{port}",
-        "-servername", host,
-        "-groups", ":".join(PQ_GROUPS),
+        "openssl",
+        "s_client",
+        "-connect",
+        f"{host}:{port}",
+        "-servername",
+        host,
+        "-groups",
+        ":".join(PQ_GROUPS),
     ]
     try:
         if runner is None:
@@ -281,7 +285,6 @@ def measure_tls_group(host: str, *, port: int = 443, runner: Any = None) -> tupl
         low = line.lower()
         if "negotiated tls" in low and "group" in low:
             group = line.split(":", 1)[1].strip()
-            kind = "hybrid" if any(g in group for g in PQ_GROUPS) else "classical"
             return group, ""
     if "handshake failure" in out.lower() or "alert" in out.lower():
         return "", "no PQ hybrid accepted"
@@ -329,9 +332,7 @@ def check_dstack(payload: Any, sent_nonce: str = "") -> Checks:
             checks.freshness_note = "quote report_data carries the challenge sent this run"
         elif report_data == quote_report_data:
             checks.freshness_bound = "false"
-            checks.freshness_note = (
-                "challenge sent this run is absent from the quote's report_data"
-            )
+            checks.freshness_note = "challenge sent this run is absent from the quote's report_data"
         else:
             checks.freshness_bound = "false"
             checks.freshness_note = "no report_data binding found in the response"
@@ -452,7 +453,8 @@ def score_gates(checks: Checks, record: dict | None = None) -> list[Gate]:
             "hardware",
             _tri_state(checks.signature_valid),
             # A verified quote is a cryptographic check we ran ourselves.
-            EvidenceStrength.VERIFIED if checks.signature_valid == "true"
+            EvidenceStrength.VERIFIED
+            if checks.signature_valid == "true"
             else EvidenceStrength.UNKNOWN,
             checks.signature_error or "quote verified against the vendor root of trust",
         )
@@ -465,7 +467,8 @@ def score_gates(checks: Checks, record: dict | None = None) -> list[Gate]:
             "channel binding",
             GateStatus.GOOD if tls_ok else GateStatus.UNVERIFIABLE,
             EvidenceStrength.VERIFIED if tls_ok else EvidenceStrength.UNKNOWN,
-            f"negotiated {checks.tls_group}" if tls_ok
+            f"negotiated {checks.tls_group}"
+            if tls_ok
             else (checks.tls_error or "no measurement taken"),
         )
     )
@@ -477,7 +480,8 @@ def score_gates(checks: Checks, record: dict | None = None) -> list[Gate]:
             _tri_state(checks.freshness_bound, good="true")
             if checks.freshness_bound in ("true", "false")
             else GateStatus.UNVERIFIABLE,
-            EvidenceStrength.VERIFIED if checks.freshness_bound == "true"
+            EvidenceStrength.VERIFIED
+            if checks.freshness_bound == "true"
             else EvidenceStrength.UNKNOWN,
             checks.freshness_note or "freshness not concluded",
         )
@@ -505,14 +509,15 @@ def score_gates(checks: Checks, record: dict | None = None) -> list[Gate]:
     # This log has no expectation to compare against, so it can never conclude
     # this gate. That is a real limitation and it is reported as unverifiable
     # rather than quietly omitted.
-    events = str(record.get("event_names") or "")
     gates.append(
         Gate(
             "workload identity",
             GateStatus.UNVERIFIABLE,
             EvidenceStrength.UNKNOWN,
-            f"measured {record.get('measurement', '')[:16]}...; no expected value to compare against"
-            if record.get("measurement") else "no measurement recorded",
+            f"measured {record.get('measurement', '')[:16]}...; "
+            "no expected value to compare against"
+            if record.get("measurement")
+            else "no measurement recorded",
         )
     )
 
@@ -583,7 +588,8 @@ def score_gates(checks: Checks, record: dict | None = None) -> list[Gate]:
                 "GPU evidence consistency",
                 GateStatus.WARNING,
                 EvidenceStrength.CORROBORATED,
-                f"{declared_gpus} GPU(s) declared, {attached} evidence item(s) attached, not verified",
+                f"{declared_gpus} GPU(s) declared, {attached} evidence item(s) "
+                "attached, not verified",
             )
         )
 
@@ -625,9 +631,7 @@ def check_tinfoil(payload: Any, sent_nonce: str = "") -> Checks:
     # nothing and reported "no nonce exchanged" for a request that had one.
     challenge = payload.get("challenge") or {}
     returned = str(challenge.get("nonce") or "")
-    checks.freshness_bound, checks.freshness_note = freshness_from_nonce(
-        sent_nonce, returned
-    )
+    checks.freshness_bound, checks.freshness_note = freshness_from_nonce(sent_nonce, returned)
 
     report_data = str(challenge.get("report_data") or "")
 
@@ -684,7 +688,5 @@ def check_tinfoil(payload: Any, sent_nonce: str = "") -> Checks:
         )
     else:
         checks.freshness_bound = "false"
-        checks.freshness_note = (
-            "report_data does not match the published derivation for this nonce"
-        )
+        checks.freshness_note = "report_data does not match the published derivation for this nonce"
     return checks

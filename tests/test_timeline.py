@@ -8,7 +8,6 @@ stability claim is honest. The 31 rendering tests were deleted with the page.
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
@@ -17,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from watch.timeline import (  # noqa: E402
     IDENTITY_FIELDS,
     UNREADABLE,
+    UNREADABLE_DATE,
     by_vendor,
     find_changes,
     load,
@@ -47,8 +47,10 @@ def test_changes_detects_only_identity_fields():
 
 def test_response_hash_change_is_not_identity_drift():
     """The raw response hash moves on any byte. It must never read as a redeploy."""
-    rows = [rec("v", "t1", measurement="same", response_sha256="h1"),
-            rec("v", "t2", measurement="same", response_sha256="h2")]
+    rows = [
+        rec("v", "t1", measurement="same", response_sha256="h1"),
+        rec("v", "t2", measurement="same", response_sha256="h2"),
+    ]
     assert find_changes(rows) == []
 
 
@@ -65,8 +67,10 @@ def test_stability_reports_the_last_change():
 
 
 def test_stability_falls_back_to_first_observation():
-    rows = [rec("v", "2026-10-01T06:00:00+00:00", measurement="aaa"),
-            rec("v", "2026-10-08T06:00:00+00:00", measurement="aaa")]
+    rows = [
+        rec("v", "2026-10-01T06:00:00+00:00", measurement="aaa"),
+        rec("v", "2026-10-08T06:00:00+00:00", measurement="aaa"),
+    ]
     since, count = stability(rows)
     assert since == "2026-10-01T06:00:00+00:00"
     assert count == 2
@@ -78,15 +82,16 @@ def test_heartbeat_records_are_not_vendors():
 
 
 def test_failed_http_is_excluded_from_change_detection():
-    rows = [rec("v", "t1", measurement="aaa"),
-            rec("v", "t2", http_status=500, measurement="zzz")]
+    rows = [rec("v", "t1", measurement="aaa"), rec("v", "t2", http_status=500, measurement="zzz")]
     assert find_changes(rows) == []
 
 
 def test_nonce_is_stripped_from_the_displayed_source():
     """A per-run nonce is not part of the endpoint's identity."""
-    assert strip_query("https://api.confidential.ai/attestation?nonce=abc") == \
-        "https://api.confidential.ai/attestation"
+    assert (
+        strip_query("https://api.confidential.ai/attestation?nonce=abc")
+        == "https://api.confidential.ai/attestation"
+    )
     assert strip_query("https://api.ppq.ai/attestation") == "https://api.ppq.ai/attestation"
 
 
@@ -98,8 +103,10 @@ def test_tcb_is_tracked_as_identity():
 
 
 def test_tcb_change_is_reported_as_a_change():
-    rows = [rec("v", "t1", tcb_version="0b01050000000000"),
-            rec("v", "t2", tcb_version="0b01060000000000")]
+    rows = [
+        rec("v", "t1", tcb_version="0b01050000000000"),
+        rec("v", "t2", tcb_version="0b01060000000000"),
+    ]
     changes = find_changes(rows)
     assert len(changes) == 1
     assert changes[0].field == "tcb_version"
@@ -116,3 +123,17 @@ def test_capability_fields_are_not_identity_so_they_do_not_fake_drift():
     changing. Only the second should read as drift."""
     for offered in ("e2ee_versions", "serving_role", "receipt_key_algos"):
         assert offered not in IDENTITY_FIELDS
+
+
+def test_unreadable_survey_is_dated_and_well_formed():
+    """UNREADABLE is hand-collected data a consumer may print, not a rendering
+    of the log. An undated list of HTTP statuses ages into a false claim, so the
+    date must travel with it, and every entry must carry all four fields."""
+    assert UNREADABLE_DATE
+    assert len(UNREADABLE) >= 5
+    for entry in UNREADABLE:
+        vendor, url, status, reason = entry
+        assert vendor and url and status and reason
+        assert "." in url and "/" in url, f"{url!r} is not a host/path"
+    vendors = [e[0] for e in UNREADABLE]
+    assert len(vendors) == len(set(vendors)), "a provider is listed twice"

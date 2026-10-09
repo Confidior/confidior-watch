@@ -8,6 +8,7 @@ endpoint on 2026-10-09:
                               || nonce_bytes || crypto_material_hash_bytes
                               || device_evidence_hash_bytes)
 """
+
 import base64
 import gzip
 import hashlib
@@ -42,7 +43,9 @@ def _v3_doc(nonce=NONCE, cm=CM_HASH, de=DE_HASH, report_data=None, gpu_items=Non
         "format": "https://tinfoil.sh/predicate/attestation/v3",
         "challenge": {
             "nonce": nonce,
-            "report_data": report_data if report_data is not None else _expected_report_data(nonce, cm, de),
+            "report_data": report_data
+            if report_data is not None
+            else _expected_report_data(nonce, cm, de),
         },
         "cpu_evidence": {
             "format": "https://tinfoil.sh/format/sev-snp-report/v1",
@@ -55,10 +58,16 @@ def _v3_doc(nonce=NONCE, cm=CM_HASH, de=DE_HASH, report_data=None, gpu_items=Non
                     {
                         "format": "https://tinfoil.sh/crypto-material/v1",
                         "items": [
-                            {"id": "tls", "format": "https://tinfoil.sh/key/spki-fp-sha256/v1",
-                             "data": "ab" * 32},
-                            {"id": "hpke", "format": "https://tinfoil.sh/key/x25519-hpke/v1",
-                             "data": "cd" * 32},
+                            {
+                                "id": "tls",
+                                "format": "https://tinfoil.sh/key/spki-fp-sha256/v1",
+                                "data": "ab" * 32,
+                            },
+                            {
+                                "id": "hpke",
+                                "format": "https://tinfoil.sh/key/x25519-hpke/v1",
+                                "data": "cd" * 32,
+                            },
                         ],
                     }
                 ).encode()
@@ -74,7 +83,9 @@ def _v3_doc(nonce=NONCE, cm=CM_HASH, de=DE_HASH, report_data=None, gpu_items=Non
                 ).encode()
             )
         ).decode(),
-        "collateral": [{"id": "cpu-endorsement", "data": {"vcek_der_base64": base64.b64encode(b"x").decode()}}],
+        "collateral": [
+            {"id": "cpu-endorsement", "data": {"vcek_der_base64": base64.b64encode(b"x").decode()}}
+        ],
     }
 
 
@@ -163,8 +174,10 @@ def test_gpu_count_is_left_unset_on_the_v3_document():
 
 
 def test_bare_v2_document_is_not_treated_as_having_evidence():
-    doc = {"format": "https://tinfoil.sh/predicate/sev-snp-guest/v2",
-           "body": base64.b64encode(gzip.compress(b"\x03" * 1184)).decode()}
+    doc = {
+        "format": "https://tinfoil.sh/predicate/sev-snp-guest/v2",
+        "body": base64.b64encode(gzip.compress(b"\x03" * 1184)).decode(),
+    }
     out = parse_tinfoil(doc)[0]
     assert "no evidence set without a nonce" in out["note"]
     assert out.get("crypto_material_hash", "") == ""

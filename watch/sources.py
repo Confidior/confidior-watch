@@ -73,9 +73,10 @@ class Source:
 # dstack / aci-1  (RedPill, Phala)
 #
 # Both endpoints return the same schema -- ``api_version: "aci/1"`` -- and on
-# 2026-10-09 returned the *same* ``keyset_digest``. RedPill's payload
-# additionally embeds Phala domains and the dstack private-ai-gateway compose.
-# That similarity is recorded here because it is evidence, not a bug in parsing.
+# 2026-10-09 returned the *same* ``keyset_digest``, ``os_image_hash`` and
+# ``tls_binding_domains``, and named the same dstack private-ai-gateway
+# repository. That similarity is recorded here because it is evidence, not a
+# bug in parsing.
 # --------------------------------------------------------------------------
 
 
@@ -123,9 +124,11 @@ def parse_dstack(payload: Any) -> list[dict[str, Any]]:
     # check compares attached evidence AGAINST: two vendors declare zero GPUs
     # and attach no GPU evidence, and that agrees. Only a mismatch is a finding.
     evidence = attestation.get("evidence") or {}
-    vm_config = payload.get("vm_config") or (
-        evidence.get("vm_config") if isinstance(evidence, dict) else None
-    ) or {}
+    vm_config = (
+        payload.get("vm_config")
+        or (evidence.get("vm_config") if isinstance(evidence, dict) else None)
+        or {}
+    )
     if isinstance(vm_config, str):
         try:
             vm_config = json.loads(vm_config)
@@ -167,9 +170,7 @@ def parse_dstack(payload: Any) -> list[dict[str, Any]]:
             "e2ee_key_algos": ",".join(sorted({str(k.get("algo") or "") for k in e2ee_keys})),
             "e2ee_key_count": str(len(e2ee_keys)),
             "tls_binding_count": str(len(tls_keys)),
-            "tls_binding_domains": ",".join(
-                sorted({str(k.get("domain") or "") for k in tls_keys})
-            ),
+            "tls_binding_domains": ",".join(sorted({str(k.get("domain") or "") for k in tls_keys})),
             # --- custody and GPU ---
             "key_custody_provider": str(
                 (attestation.get("key_custody") or {}).get("provider") or ""
@@ -309,14 +310,24 @@ def parse_c8s(payload: Any) -> list[dict[str, Any]]:
         "operational_status": str(payload.get("operationalStatus") or ""),
         "tls_binding_status": str((tls_block.get("binding") or {}).get("status") or ""),
         "gpu_evidence_count": str(len(gpu.get("evidence") or [])) if isinstance(gpu, dict) else "0",
-        "gpu_evidence_reason": str((gpu.get("reason") or "")) if isinstance(gpu, dict) else "",
-        "frontdoor_mode": str((payload.get("frontDoor") or {}).get("receipt", {}).get("front_door_mode") or ""),
-        "frontdoor_platform": str((payload.get("frontDoor") or {}).get("receipt", {}).get("platform") or ""),
-        "serving_leaf_sha256": str((payload.get("frontDoor") or {}).get("receipt", {}).get("serving_leaf_sha256") or ""),
+        "gpu_evidence_reason": str(gpu.get("reason") or "") if isinstance(gpu, dict) else "",
+        "frontdoor_mode": str(
+            (payload.get("frontDoor") or {}).get("receipt", {}).get("front_door_mode") or ""
+        ),
+        "frontdoor_platform": str(
+            (payload.get("frontDoor") or {}).get("receipt", {}).get("platform") or ""
+        ),
+        "serving_leaf_sha256": str(
+            (payload.get("frontDoor") or {}).get("receipt", {}).get("serving_leaf_sha256") or ""
+        ),
         "receipt_count": str(len(payload.get("receipts") or [])),
         "mesh_ca": str(c8s.get("meshCaSha256") or ""),
-        "operator_key_status": str((c8s.get("operatorTrust") or {}).get("activeKeySetStatus") or ""),
-        "operator_keyset_sha256": str((c8s.get("operatorTrust") or {}).get("expectedKeySetSha256") or ""),
+        "operator_key_status": str(
+            (c8s.get("operatorTrust") or {}).get("activeKeySetStatus") or ""
+        ),
+        "operator_keyset_sha256": str(
+            (c8s.get("operatorTrust") or {}).get("expectedKeySetSha256") or ""
+        ),
         "schema_version": str(payload.get("schemaVersion") or ""),
         "nonce": str(payload.get("nonce") or ""),
         "workload_digests": json.dumps(per_workload, sort_keys=True, separators=(",", ":")),
@@ -447,9 +458,7 @@ def default_sources() -> list[Source]:
 # .json named in an earlier draft has never existed (404 at both the pinned and
 # latest paths). The live endpoint below is what the crawl reads.
 
-TINFOIL_ATTESTATION_URL = (
-    "https://inference.tinfoil.sh/.well-known/tinfoil-attestation"
-)
+TINFOIL_ATTESTATION_URL = "https://inference.tinfoil.sh/.well-known/tinfoil-attestation"
 TINFOIL_REPORT_DATA_ALG = "https://tinfoil.sh/report-data/v1"
 
 
@@ -522,7 +531,11 @@ def parse_tinfoil(payload: Any) -> list[dict[str, Any]]:
         cm_raw = payload.get("crypto_material")
         if isinstance(cm_raw, str) and cm_raw:
             try:
-                cm = json.loads(_gunzip_b64(cm_raw)) if not cm_raw.startswith("{") else json.loads(cm_raw)
+                cm = (
+                    json.loads(_gunzip_b64(cm_raw))
+                    if not cm_raw.startswith("{")
+                    else json.loads(cm_raw)
+                )
                 for item in cm.get("items") or []:
                     if item.get("id") == "tls":
                         out["tls_spki_fingerprint"] = str(item.get("data") or "")
@@ -538,7 +551,11 @@ def parse_tinfoil(payload: Any) -> list[dict[str, Any]]:
         count = ""
         if isinstance(de_raw, str) and de_raw:
             try:
-                de = json.loads(_gunzip_b64(de_raw)) if not de_raw.startswith("{") else json.loads(de_raw)
+                de = (
+                    json.loads(_gunzip_b64(de_raw))
+                    if not de_raw.startswith("{")
+                    else json.loads(de_raw)
+                )
                 items = de.get("items") or []
                 count = str(len(items))
                 out["gpu_evidence_reason"] = (

@@ -6,8 +6,6 @@ import json
 import sys
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from watch.collector import (  # noqa: E402
@@ -32,7 +30,8 @@ from watch.sources import (  # noqa: E402
 
 DSTACK_SAMPLE = {
     "api_version": "aci/1",
-    "workload_keyset_digest": "sha256:ef8a03c0c5e349310394c0d5865f766f8a1258f1acdb5fcb6ed2ebcd757e5f5a",
+    "workload_keyset_digest":
+        "sha256:ef8a03c0c5e349310394c0d5865f766f8a1258f1acdb5fcb6ed2ebcd757e5f5a",
     "attestation": {
         "tee_type": "tdx",
         "workload_keyset": {"not_after": 1792250755},
@@ -151,7 +150,9 @@ def test_collect_survives_non_json_body():
 def test_collect_does_not_parse_non_200_body():
     """A 426 body is a rejection notice, not evidence. Do not parse it."""
     src = Source(vendor="tinfoil", url="https://x", parse=parse_dstack)
-    (obs,) = collect([src], fetcher=lambda u: (426, DSTACK_SAMPLE and json.dumps(DSTACK_SAMPLE).encode()))
+    (obs,) = collect(
+        [src], fetcher=lambda u: (426, DSTACK_SAMPLE and json.dumps(DSTACK_SAMPLE).encode())
+    )
     assert obs.http_status == 426
     assert obs.measurement == ""
 
@@ -166,7 +167,9 @@ def test_collect_hashes_raw_response():
 
 
 def test_collect_fills_platform_from_source_when_parser_is_silent():
-    src = Source(vendor="v", url="https://x", parse=lambda p: [{"measurement": "abc"}], platform="intel-tdx")
+    src = Source(
+        vendor="v", url="https://x", parse=lambda p: [{"measurement": "abc"}], platform="intel-tdx"
+    )
     (obs,) = collect([src], fetcher=lambda u: (200, b"{}"))
     assert obs.platform == "intel-tdx"
 
@@ -180,7 +183,10 @@ def test_collect_is_deterministic_for_a_fixed_response():
 
 
 def test_heartbeat_names_the_vendors_seen():
-    obs = [Observation(observed_at="t", vendor="redpill"), Observation(observed_at="t", vendor="ppq")]
+    obs = [
+        Observation(observed_at="t", vendor="redpill"),
+        Observation(observed_at="t", vendor="ppq"),
+    ]
     hb = heartbeat(obs, "t")
     assert hb.vendor == "__heartbeat__"
     assert "2 observations across 2 vendors" in hb.note
@@ -264,7 +270,10 @@ C8S_SAMPLE = {
     "nonce": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
     "scope": "launch-or-admission-only",
     "operationalStatus": "not-verified",
-    "release": {"id": "v0.13.28-rc.2", "bundleSha256": "sha256:82859291c495814e7fe6347d58d526bb5152cff88f520db1eba19cc6258a5586"},
+    "release": {
+        "id": "v0.13.28-rc.2",
+        "bundleSha256": "sha256:82859291c495814e7fe6347d58d526bb5152cff88f520db1eba19cc6258a5586",
+    },
     "gpuEvidence": {"evidence": [], "reason": "no gpu_attested field in this protocol"},
     "tls": {"binding": {"status": "requires-attest-lb", "publicKeySha256": None}},
     "c8s": {
@@ -275,7 +284,9 @@ C8S_SAMPLE = {
             "document": {
                 "schema": "c8s.allowlist/v1",
                 "workloads": {
-                    "gateway": {"containers": [{"digest": "sha256:3532143fd358d46acc2b3eb4902e5c5b"}]},
+                    "gateway": {
+                        "containers": [{"digest": "sha256:3532143fd358d46acc2b3eb4902e5c5b"}]
+                    },
                     "inference-worker-0": {"containers": [{"digest": "sha256:aaa111"}]},
                 },
             }
@@ -319,7 +330,9 @@ def test_parse_c8s_changes_when_a_workload_digest_changes():
     import copy
 
     mutated = copy.deepcopy(C8S_SAMPLE)
-    mutated["c8s"]["activeAllowlist"]["document"]["workloads"]["gateway"]["containers"][0]["digest"] = "sha256:CHANGED"
+    mutated["c8s"]["activeAllowlist"]["document"]["workloads"]["gateway"]["containers"][0][
+        "digest"
+    ] = "sha256:CHANGED"
     assert parse_c8s(mutated)[0]["measurement"] != parse_c8s(C8S_SAMPLE)[0]["measurement"]
 
 
@@ -353,7 +366,7 @@ def test_every_record_carries_the_log_schema_version():
     """The log is an interface. Without a version on each record, a renamed
     field breaks a consumer silently and there is no way to detect it."""
     from watch.collector import LOG_SCHEMA, collect, heartbeat
-    from watch.sources import Source, parse_dstack
+    from watch.sources import Source
 
     src = Source(vendor="v", url="https://x", parse=parse_dstack)
     (obs,) = collect([src], fetcher=lambda u: (200, b"{}"))
@@ -367,13 +380,13 @@ def test_log_schema_is_not_the_vendors_schema_version():
     declares about itself. The log's own version needs its own name, or a
     consumer cannot tell which of the two it is reading."""
     from watch.collector import collect
-    from watch.sources import Source, parse_dstack
+    from watch.sources import Source
 
     src = Source(vendor="v", url="https://x", parse=lambda p: [{"schema_version": "9"}])
     (obs,) = collect([src], fetcher=lambda u: (200, b"{}"))
     line = json.loads(obs.to_json())
-    assert line["schema_version"] == "9"      # the vendor's
-    assert line["log_schema"] != "9"          # ours, distinct
+    assert line["schema_version"] == "9"  # the vendor's
+    assert line["log_schema"] != "9"  # ours, distinct
 
 
 def test_record_fields_has_no_duplicates():

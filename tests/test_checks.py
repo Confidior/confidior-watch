@@ -30,7 +30,7 @@ from watch.checks import (  # noqa: E402
 
 
 def test_not_attempted_is_distinguishable_from_failed():
-    """"" (not attempted) and "false" (failed) must never collapse.
+    """ "" (not attempted) and "false" (failed) must never collapse.
 
     A missing engine means we could not check. A failed check means we checked
     and it failed. Recording the second when the first is true would be a false

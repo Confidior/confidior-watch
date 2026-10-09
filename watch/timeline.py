@@ -82,13 +82,21 @@ UNREADABLE_DATE = "2026-10-09"
 #: by hand, and no observation record exists for most of them. It lives here so
 #: a consumer can show what the crawl cannot observe on its own.
 UNREADABLE = (
-    ("tinfoil", "api.tinfoil.sh/v1/attestation/report",
-     "426", "rejects unencrypted bodies, requires an Encrypted-HTTP-Body-Protocol body"),
+    (
+        "tinfoil",
+        "api.tinfoil.sh/v1/attestation/report",
+        "426",
+        "rejects unencrypted bodies, requires an Encrypted-HTTP-Body-Protocol body",
+    ),
     ("near", "cloud-api.near.ai/v1/attestation/report", "401", "requires an API key"),
     ("chutes", "api.chutes.ai/v1/attestation", "429", "rate-limits anonymous reads"),
-    ("venice", "api.venice.ai/api/v1/tee/attestation?model=", "400",
-     "endpoint works and takes a model; 20 models tested, none TEE-capable, "
-     "109 rate-limited and untested"),
+    (
+        "venice",
+        "api.venice.ai/api/v1/tee/attestation?model=",
+        "400",
+        "endpoint works and takes a model; 20 models tested, none TEE-capable, "
+        "109 rate-limited and untested",
+    ),
     ("privatemode", "privatemode.ai/api/attestation", "404", "no public path"),
     ("maple", "api.maple.ai/attestation", "DNS", "host does not resolve"),
     ("nanogpt", "nano-gpt.com/api/attestation", "404", "no public path"),
@@ -151,7 +159,7 @@ def find_changes(rows: list[dict[str, Any]]) -> list[Change]:
     """
     usable = [r for r in rows if r.get("http_status") == 200]
     changes: list[Change] = []
-    for prev, cur in zip(usable, usable[1:]):
+    for prev, cur in zip(usable, usable[1:], strict=False):
         for f in IDENTITY_FIELDS:
             a, b = prev.get(f, ""), cur.get(f, "")
             if a and b and a != b:

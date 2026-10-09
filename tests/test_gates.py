@@ -1,4 +1,5 @@
 """The gate model: separately scored layers, with an honest confidence ladder."""
+
 from watch.checks import (
     Checks,
     EvidenceStrength,
@@ -88,8 +89,7 @@ def test_tcb_current_is_good_and_outdated_is_bad():
 
 
 def test_tcb_unknown_stays_unverifiable():
-    assert _gates(Checks(tcb_status="unknown"))["TCB policy"].status is \
-        GateStatus.UNVERIFIABLE
+    assert _gates(Checks(tcb_status="unknown"))["TCB policy"].status is GateStatus.UNVERIFIABLE
 
 
 # --- summary ----------------------------------------------------------------
