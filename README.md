@@ -98,16 +98,18 @@ observable by a neutral third party.
 
 ## Running it
 
+Dependencies and dev tools are declared in `pyproject.toml` and pinned in
+`uv.lock`. This needs [uv](https://docs.astral.sh/uv/):
+
 ```sh
-pip install -r requirements.txt
-pip install pytest          # only to run the suite
-python -m watch.collector --log observations.jsonl --anchor
-python -m pytest tests/ -q
+uv run python -m watch.collector --log observations.jsonl --anchor
+uv run pytest tests/ -q
 ```
 
-`--dry-run` prints without writing. The run does not require the engine: without
-a `confidior-engine` checkout beside this repo, the signature check records
-`engine not importable` and the run still completes (see Provenance).
+`uv run` creates the virtualenv and installs the locked dependencies on first
+use. `--dry-run` prints without writing. The run does not require the engine:
+without a `confidior-engine` checkout beside this repo, the signature check
+records `engine not importable` and the run still completes (see Provenance).
 
 ## What to look at first
 

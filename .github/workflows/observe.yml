@@ -35,18 +35,18 @@ jobs:
         with:
           python-version: "3.12"
 
+      - uses: astral-sh/setup-uv@v5
+
       - name: Install
-        run: pip install -r requirements.txt
+        run: uv sync --locked
 
       - name: Test
-        run: |
-          pip install pytest
-          python -m pytest tests/ -q
+        run: uv run pytest tests/ -q
 
       - name: Observe
         id: observe
         run: |
-          python -m watch.collector --log observations.jsonl --anchor
+          uv run python -m watch.collector --log observations.jsonl --anchor
 
       - name: Detect sources that returned nothing usable
         id: check
