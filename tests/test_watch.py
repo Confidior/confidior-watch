@@ -342,3 +342,52 @@ def test_c8s_url_carries_a_fresh_nonce_each_time():
     assert a != b and an != bn
     assert "nonce=" in a and a.count("nonce=") == 1
     assert an in a
+
+
+# ---------------------------------------------------------------------------
+# The log's own schema envelope.
+# ---------------------------------------------------------------------------
+
+
+def test_every_record_carries_the_log_schema_version():
+    """The log is an interface. Without a version on each record, a renamed
+    field breaks a consumer silently and there is no way to detect it."""
+    from watch.collector import LOG_SCHEMA, collect, heartbeat
+    from watch.sources import Source, parse_dstack
+
+    src = Source(vendor="v", url="https://x", parse=parse_dstack)
+    (obs,) = collect([src], fetcher=lambda u: (200, b"{}"))
+    for record in (obs, heartbeat([obs], observed_at="t")):
+        line = json.loads(record.to_json())
+        assert line["log_schema"] == LOG_SCHEMA
+
+
+def test_log_schema_is_not_the_vendors_schema_version():
+    """`schema_version` in a record is the version the *vendor's* payload
+    declares about itself. The log's own version needs its own name, or a
+    consumer cannot tell which of the two it is reading."""
+    from watch.collector import collect
+    from watch.sources import Source, parse_dstack
+
+    src = Source(vendor="v", url="https://x", parse=lambda p: [{"schema_version": "9"}])
+    (obs,) = collect([src], fetcher=lambda u: (200, b"{}"))
+    line = json.loads(obs.to_json())
+    assert line["schema_version"] == "9"      # the vendor's
+    assert line["log_schema"] != "9"          # ours, distinct
+
+
+def test_record_fields_has_no_duplicates():
+    """RECORD_FIELDS is the documented contract. A name listed twice inflates
+    the count a reader uses to check the contract against the dataclass."""
+    from watch.collector import RECORD_FIELDS
+
+    assert len(RECORD_FIELDS) == len(set(RECORD_FIELDS))
+
+
+def test_record_fields_matches_the_dataclass_exactly():
+    """The declared field list and the thing that is serialised must not drift."""
+    from dataclasses import fields as dc_fields
+
+    from watch.collector import RECORD_FIELDS, Observation
+
+    assert {f.name for f in dc_fields(Observation)} == set(RECORD_FIELDS)

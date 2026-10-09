@@ -33,9 +33,28 @@ logger = logging.getLogger(__name__)
 DEFAULT_TIMEOUT = 25.0
 USER_AGENT = "confidior-watch/0.1 (+https://github.com/confidior/confidior-watch)"
 
+#: Version of the log's own record shape.
+#:
+#: This is the *log's* version, not any vendor's. It is deliberately not called
+#: ``schema_version``: that name is already a field in the record, where it
+#: carries the version string the *vendor's* payload declares about itself.
+#: Overloading it would make a consumer unable to tell which of the two it was
+#: reading.
+#:
+#: Bump this when a field is renamed, removed, or changes meaning, because that
+#: is what breaks a consumer. Adding an optional field does not bump it: an old
+#: consumer ignoring an unknown key still reads the record correctly, and every
+#: field is written on every line, so nothing becomes conditionally absent.
+#:
+#: A record without this key predates the envelope. Those lines are the original
+#: field set and are compatible with version "1"; the envelope was added so the
+#: *next* change can be detected at all.
+LOG_SCHEMA = "1"
+
 #: Every field written to the log. Kept explicit so the log is self-describing
 #: and a reader never has to infer the schema from examples.
 RECORD_FIELDS = (
+    "log_schema",
     "observed_at",
     "vendor",
     "workload",
@@ -109,10 +128,8 @@ RECORD_FIELDS = (
     "snp_tcb",
     "snp_report_data",
     "report_data",
-    "nonce",
     "crypto_material_hash",
     "device_evidence_hash",
-    "tls_spki_fingerprint",
     "hpke_public_key",
     "collateral_count",
     "vcek_present",
@@ -126,6 +143,10 @@ class Observation:
 
     observed_at: str
     vendor: str
+    #: The log's own record-shape version, stamped on every record. It sits after
+    #: the required fields because a dataclass cannot put a defaulted field ahead
+    #: of them. It is written on every line regardless, so the log stays uniform.
+    log_schema: str = LOG_SCHEMA
     workload: str = ""
     platform: str = ""
     measurement: str = ""
