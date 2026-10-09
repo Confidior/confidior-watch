@@ -34,7 +34,8 @@ There is no page. The log is the published artifact, and a consumer renders it.
 
 ## Design rules
 
-These are load-bearing, and each has a test enforcing it.
+These are load-bearing. Most are enforced by a test in `tests/`; the one that
+is not is enforced by the workflow instead, and says so below.
 
 - **A dead source is a finding, not a failure.** A non-200 is recorded as an
   observation with its status. "No observations since DATE" is honest and
@@ -43,7 +44,9 @@ These are load-bearing, and each has a test enforcing it.
   gap in the timeline, and the timeline is the asset.
 - **Failures surface themselves.** If no source returns readable evidence, the
   job opens an issue on itself. One bad week is normal; zero readable evidence
-  means something needs a human.
+  means something needs a human. This one has no unit test: it is the
+  `Open an issue if nothing was readable` step in
+  `.github/workflows/observe.yml`, which is where the claim is checkable.
 - **Depth over breadth.** Five sources, deliberately. Five to eight with
   unbroken history proves continuity; sixty with patchy history proves nothing.
   Every addition costs adapter rot forever.
