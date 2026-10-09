@@ -43,10 +43,14 @@ jobs:
       # connection is made, so every observation records 'group not reported'
       # and the column silently holds nothing. Build 3.5 from source.
       #
-      # Not cached, and deliberately not fatal-if-skipped: if the build fails the
-      # run continues, but it must not do so quietly, because the fallback is the
-      # defect this step exists to fix. The version is printed before and after.
-      - name: Install OpenSSL with the PQ groups
+      # This step must not abort the run. An aborted run is a gap in the timeline
+      # and the timeline is the asset, so a failed build costs the wire column and
+      # nothing else: the observations are still collected, and each one records
+      # that the probe could not offer the group rather than inventing a result.
+      # continue-on-error keeps that trade; the version lines below keep it visible.
+      - name: Build OpenSSL with the PQ groups
+        id: openssl
+        continue-on-error: true
         run: |
           set -euo pipefail
           echo "image openssl: $(openssl version)"
@@ -55,10 +59,10 @@ jobs:
           curl -sSLf https://github.com/openssl/openssl/releases/download/openssl-3.5.1/openssl-3.5.1.tar.gz -o /tmp/openssl.tar.gz
           tar -xzf /tmp/openssl.tar.gz -C /tmp
           cd /tmp/openssl-3.5.1
-          ./Configure --prefix=/usr/local/openssl35 --libdir=lib
+          ./Configure --prefix=/usr/local/openssl --libdir=lib
           make -j"$(nproc)"
           sudo make install_sw
-          echo "built openssl: $(/usr/local/openssl35/bin/openssl version)"
+          echo "built openssl: $(/usr/local/openssl/bin/openssl version)"
 
       - name: Install
         run: uv sync --locked
@@ -69,9 +73,15 @@ jobs:
       - name: Observe
         id: observe
         run: |
-          PATH="/usr/local/openssl35/bin:$PATH" \
+          # Use the built OpenSSL when it is there, so the wire check can actually
+          # offer the PQ groups. Say which one ran either way.
+          if [ -x /usr/local/openssl/bin/openssl ]; then
+            export PATH="/usr/local/openssl/bin:$PATH"
+          else
+            echo "::warning::no built OpenSSL; the wire check will record that it cannot offer the PQ groups"
+          fi
+          echo "using: $(openssl version)"
           uv run python -m watch.collector --log observations.jsonl --anchors anchors.jsonl --anchor
-          openssl version
 
       - name: Detect sources that returned nothing usable
         id: check
