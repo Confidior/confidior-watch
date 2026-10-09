@@ -118,8 +118,9 @@ def test_c8s_check_binds_to_the_nonce_this_run_sent():
 
 
 def test_dstack_records_an_unbound_binding_as_unbound_not_as_fresh():
-    """RedPill echoes report_data, but nothing we chose is in it. Calling that
-    fresh would be exactly the overclaim this repo exists to avoid."""
+    """A response whose report_data merely repeats what the quote already
+    carries, with no challenge of ours in it, is not evidence of freshness.
+    Calling that fresh would be exactly the overclaim this repo exists to avoid."""
     payload = {"attestation": {"report_data": "aa", "evidence": {"quote_report_data": "aa"}}}
     c = check_dstack(payload)
     assert c.freshness_bound == "unbound"
@@ -206,8 +207,9 @@ def test_dstack_freshness_true_when_challenge_is_inside_the_quote():
 
 
 def test_dstack_freshness_false_when_the_endpoint_ignores_the_challenge():
-    """Phala accepts ?nonce= and does not put it in the quote. That is worse
-    than rejecting it, because it looks like it bound."""
+    """An endpoint that accepts ?nonce= and does not put it in the quote is
+    worse than one that rejects it, because the URL makes it look bound. The
+    check must record that as false, not as unknown."""
     payload = {"attestation": {"report_data": "aa", "evidence": {"quote_report_data": "aa"}}}
     c = check_dstack(payload, "N1")
     assert c.freshness_bound == "false"

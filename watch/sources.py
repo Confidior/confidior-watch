@@ -73,7 +73,7 @@ class Source:
 # dstack / aci-1  (RedPill, Phala)
 #
 # Both endpoints return the same schema -- ``api_version: "aci/1"`` -- and on
-# 2026-10-09 returned the *same* ``workload_keyset_digest``. RedPill's payload
+# 2026-10-09 returned the *same* ``keyset_digest``. RedPill's payload
 # additionally embeds Phala domains and the dstack private-ai-gateway compose.
 # That similarity is recorded here because it is evidence, not a bug in parsing.
 # --------------------------------------------------------------------------

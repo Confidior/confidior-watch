@@ -296,8 +296,10 @@ def measure_tls_group(host: str, *, port: int = 443, runner: Any = None) -> tupl
 def check_dstack(payload: Any, sent_nonce: str = "") -> Checks:
     """dstack aci/1 (RedPill, Phala).
 
-    These endpoints accept a ``?nonce=`` challenge and echo it inside the
-    quote's report_data, so freshness is checkable rather than assumed.
+    These endpoints accept a ``?nonce=`` challenge. Whether the challenge
+    reaches the quote's report_data is checked per observation; it is not
+    assumed here, because at least one of the two accepts the parameter and
+    does not bind it.
     """
     checks = Checks()
     if not isinstance(payload, dict):
@@ -313,10 +315,9 @@ def check_dstack(payload: Any, sent_nonce: str = "") -> Checks:
     checks.tcb_version = fields.get("tcb_version", "")
     checks.tcb_reference = fields.get("mrseam", "")
 
-    # report_data is the quote's binding to a caller-supplied value. RedPill
-    # echoes it under both names; whether it binds anything *we* chose is a
-    # separate question, and today no challenge is sent, so this records the
-    # binding's presence rather than a freshness conclusion.
+    # report_data is the quote's binding to a caller-supplied value. Whether it
+    # binds anything *we* chose is a separate question from whether it is
+    # present, and this records the difference rather than assuming a binding.
     report_data = str(attestation.get("report_data") or "")
     quote_report_data = str(evidence.get("quote_report_data") or "")
 
