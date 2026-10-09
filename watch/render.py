@@ -241,6 +241,10 @@ tr:last-child td{{border-bottom:none}}
 .obs .v{{font-family:var(--mono);color:var(--text);word-break:break-all;
   user-select:all;cursor:text}}
 .obs .v.faint{{color:var(--text-faint)}}
+.obs h4{{font-family:var(--mono);font-size:.72rem;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--text-mute);margin:16px 0 8px;font-weight:600}}
+.obs .facts{{margin:0 0 4px}}
+.obs table.kv td.k{{width:38%}}
 .obs pre.blob{{margin:0 0 10px;padding:10px 12px;background:var(--bg-input);
   border:1px solid var(--line);border-radius:var(--radius-sm);
   font-family:var(--mono);font-size:.72rem;color:var(--text-dim);
@@ -400,6 +404,145 @@ def strip_query(url: str) -> str:
     return url.split("?", 1)[0]
 
 
+def _fact(label: str, value: str, cls: str = "none") -> str:
+    return (f'<span class="fact {cls}">{html.escape(label)} '
+            f"<b>{html.escape(value)}</b></span>")
+
+
+def _row_facts(row: dict[str, Any]) -> list[str]:
+    """The verification state of one observation, as facts rather than a verdict.
+
+    These describe the run that produced *this* record. They used to be lifted
+    to the vendor panel from `usable[-1]`, so a vendor with several
+    observations showed only the newest one's state and the rest were lost.
+    """
+    facts: list[str] = []
+
+    sig = row.get("signature_valid", "")
+    if sig == "true":
+        facts.append(_fact("quote signature", "verified", "good"))
+    elif sig == "false":
+        facts.append(_fact("quote signature", "failed", "bad"))
+    else:
+        facts.append(_fact("quote signature", "not attempted", "none"))
+
+    # A chip with an empty value reads as a blank label. When the field is
+    # absent the chip says so, the way the signature and freshness chips do.
+    tcb = row.get("tcb_version", "")
+    if tcb:
+        facts.append(_fact("tcb", tcb[:16], "good"))
+    else:
+        facts.append(_fact("tcb", "not reported", "none"))
+
+    fresh = row.get("freshness_bound", "")
+    if fresh == "true":
+        facts.append(_fact("freshness", "bound", "good"))
+    elif fresh == "false":
+        facts.append(_fact("freshness", "not bound", "bad"))
+    elif fresh == "unbound":
+        facts.append(_fact("freshness", "unbound", "none"))
+    else:
+        facts.append(_fact("freshness", "not attempted", "none"))
+
+    tls = row.get("tls_group", "")
+    facts.append(_fact("key exchange", tls or "not measured",
+                       "good" if "MLKEM" in tls else "none"))
+
+    if row.get("http_status") != 200:
+        facts.append(_fact("http", str(row.get("http_status")), "bad"))
+
+    return facts
+
+
+def _gate_parts(row: dict[str, Any]) -> list[str]:
+    """The gate grid for one observation: which claims survived, how strongly."""
+    checks = Checks(
+        signature_valid=str(row.get("signature_valid") or ""),
+        signature_error=str(row.get("signature_error") or ""),
+        tcb_version=str(row.get("tcb_version") or ""),
+        tcb_status=str(row.get("tcb_status") or ""),
+        tcb_reference=str(row.get("tcb_reference") or ""),
+        freshness_bound=str(row.get("freshness_bound") or ""),
+        freshness_note=str(row.get("freshness_note") or ""),
+        tls_group=str(row.get("tls_group") or ""),
+        tls_error=str(row.get("tls_error") or ""),
+    )
+    gates = score_gates(checks, row)
+    counts = gate_summary(gates)
+
+    headline = " ".join(
+        f'<span class="g g-{status}">{counts.get(status, 0)} {status}</span>'
+        for status in ("good", "warning", "bad", "unverifiable")
+        if counts.get(status)
+    )
+    out = [
+        '<p class="note">Checks run, for this observation: '
+        f"{len(gates)} independent checks, each with its own result and its own "
+        "evidence strength. This is a record of what was checked, not a rating.</p>",
+        f'<p class="gatebar">{headline}</p>',
+        "<table><tr><th>gate</th><th>status</th><th>evidence</th></tr>",
+    ]
+    for gate in gates:
+        out.append(
+            f'<tr><td class="m">{html.escape(gate.name)}</td>'
+            f'<td><span class="g g-{gate.status.value}">'
+            f'{html.escape(gate.status.value)}</span></td>'
+            f'<td class="m">{html.escape(gate.strength.value)}</td></tr>'
+        )
+    out.append("</table>")
+    return out
+
+
+#: The curated surface, in reading order. Each entry is a label and the keys it
+#: reads from one observation. This is per-observation like every other field.
+SURFACE_FIELDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("serving role", ("serving_role",)),
+    ("platform", ("platform",)),
+    ("tee type", ("tee_type",)),
+    ("E2EE protocol versions", ("e2ee_versions",)),
+    ("receipt keys published", ("receipt_key_algos", "receipt_key_count")),
+    ("E2EE keys published", ("e2ee_key_algos", "e2ee_key_count")),
+    ("TLS bindings", ("tls_binding_domains", "tls_binding_count")),
+    ("keyset expires", ("keyset_not_after",)),
+    ("key custody held by", ("key_custody_provider",)),
+    ("GPU architecture", ("nvidia_arch",)),
+    ("GPU evidence attached", ("nvidia_evidence_count", "gpu_evidence_reason")),
+    ("source repo", ("repo_url",)),
+    ("source commit", ("repo_commit",)),
+    ("image provenance", ("provenance_image",)),
+    ("measured boot events", ("event_names",)),
+    ("attestation protocol", ("protocol",)),
+    ("protocol commit", ("protocol_commit",)),
+    ("release", ("release_id",)),
+    ("schema version", ("schema_version",)),
+    ("declared scope", ("scope",)),
+    ("provider self-status", ("operational_status",)),
+    ("TLS binding status", ("tls_binding_status",)),
+    ("front door mode", ("frontdoor_mode",)),
+    ("serving leaf", ("serving_leaf_sha256",)),
+    ("operator key status", ("operator_key_status",)),
+    ("receipts published", ("receipt_count",)),
+    ("HPKE key published", ("hpke_key_present",)),
+    ("document format", ("doc_format",)),
+)
+
+
+def _surface_row(row: dict[str, Any]) -> list[tuple[str, str]]:
+    """The curated surface for one observation, filled fields only."""
+    out: list[tuple[str, str]] = []
+    for label, keys in SURFACE_FIELDS:
+        if label.startswith("receipt keys") or label.startswith("E2EE keys") \
+                or label.startswith("TLS bindings"):
+            value = _fmt_keys(row.get(keys[0], ""), row.get(keys[1], ""))
+        elif label.startswith("GPU evidence"):
+            value = _count_word(row.get(keys[0], ""), row.get(keys[1], ""))
+        else:
+            value = row.get(keys[0], "")
+        if value:
+            out.append((label, value))
+    return out
+
+
 def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
     groups = by_vendor(records)
     heartbeats = [r for r in records if r.get("vendor") == "__heartbeat__"]
@@ -535,65 +678,17 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
                 "not return readable evidence. That is recorded, not hidden.</p>"
             )
 
-        # Verification state, stated as facts rather than a verdict. These are
-        # checks that ran this run, not an assessment of the provider.
-        latest = usable[-1] if usable else None
-        if latest:
-            facts: list[str] = []
-
-            def fact(label: str, value: str, cls: str = "none") -> str:
-                return (f'<span class="fact {cls}">{html.escape(label)} '
-                        f"<b>{html.escape(value)}</b></span>")
-
-            sig = latest.get("signature_valid", "")
-            if sig == "true":
-                facts.append(fact("quote signature", "verified", "good"))
-            elif sig == "false":
-                facts.append(fact("quote signature", "failed", "bad"))
-            else:
-                facts.append(fact("quote signature", "not attempted", "none"))
-
-            # A chip with an empty value reads as a blank label. When the field
-            # is absent the chip says so, the way the signature and freshness
-            # chips already do.
-            tcb = latest.get("tcb_version", "")
-            if tcb:
-                facts.append(fact("tcb", tcb[:16], "good"))
-            else:
-                facts.append(fact("tcb", "not reported", "none"))
-
-            fresh = latest.get("freshness_bound", "")
-            if fresh == "true":
-                facts.append(fact("freshness", "bound", "good"))
-            elif fresh == "false":
-                facts.append(fact("freshness", "not bound", "bad"))
-            elif fresh == "unbound":
-                facts.append(fact("freshness", "unbound", "none"))
-            else:
-                facts.append(fact("freshness", "not attempted", "none"))
-
-            tls = latest.get("tls_group", "")
-            facts.append(fact("key exchange", tls or "not measured",
-                              "good" if "MLKEM" in tls else "none"))
-
-            if latest.get("http_status") != 200:
-                facts.append(fact("http", str(latest.get("http_status")), "bad"))
-
-            parts.append('<div class="facts">' + "".join(facts) + "</div>")
-
-        # Each observation is collapsible, newest first, and opens onto every
-        # field the run recorded for it. The log stores 77 fields per
-        # observation and the page used to print a curated handful, capped at
-        # the last 12 rows, so history and detail were both lost on the page.
-        # The collapsed line carries the facts a reader scans for (when, what
-        # it saw, whether it is readable); the body carries the rest.
+        # What belongs to the vendor, and only to the vendor: where it was
+        # first or last seen, how many observations there are, and whether any
+        # of them was readable. Everything that varies per run -- the facts, the
+        # gate grid, the measured surface, the field values -- lives inside the
+        # observation it came from, below.
         parts.append(
             f'<h3>Observations <span class="note">{len(rows)} recorded, '
             "newest first. Open one to see every field that run recorded.</span></h3>"
         )
         for row in reversed(rows):
             ident = row.get("measurement") or row.get("keyset_digest") or ""
-            digest = row.get("response_sha256") or ""
             status = row.get("http_status", 0)
             ok = status == 200 and bool(ident)
             cls = "ok" if ok else "bad"
@@ -610,17 +705,49 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
                 + "</span></summary>"
             )
             parts.append('<div class="body">')
-            # The row's own re-fetch affordance, stated once and outside the
-            # field table. It used to be a table cell; when that table became a
-            # field dump the cell was dropped, which silently removed the one
-            # thing a reader needs to check a row. `_recheck_link` states the
-            # endpoint and either a re-fetch link or the single-use-challenge
-            # reason the link cannot work.
+
+            # The run's verification state, for this observation.
+            parts.append('<div class="facts">' + "".join(_row_facts(row)) + "</div>")
+
+            # The row's own re-fetch affordance, stated once. It used to be a
+            # table cell; when that table became a field dump the cell was
+            # dropped, which silently removed the one thing a reader needs to
+            # check a row. `_recheck_link` states the endpoint and either a
+            # re-fetch link or the single-use-challenge reason it cannot work.
             if src:
                 parts.append(
                     '<p class="note">source <span class="mono">'
                     f"{html.escape(strip_query(src))}</span> {_recheck_link(src)}</p>"
                 )
+
+            # The gate grid and the measured surface, both computed from *this*
+            # row. They used to be built from `usable[-1]` at the vendor level,
+            # so a source with several observations showed one run's checks and
+            # silently dropped the rest.
+            parts.append("<h4>Checks</h4>")
+            parts.extend(_gate_parts(row))
+
+            surface = _surface_row(row)
+            parts.append(
+                '<h4>Measured surface '
+                f'<span class="note">{len(surface)} of {len(SURFACE_FIELDS)} '
+                "fields published</span></h4>"
+            )
+            if surface:
+                parts.append('<table class="kv">')
+                for name, value in surface:
+                    parts.append(
+                        f'<tr><td class="k">{html.escape(name)}</td>'
+                        f'<td class="v">{html.escape(str(value))}</td></tr>'
+                    )
+                parts.append("</table>")
+            else:
+                parts.append(
+                    '<p class="empty">Nothing readable was published in this '
+                    "observation.</p>"
+                )
+
+            parts.append('<h4>Every field recorded</h4>')
             parts.append("<table>")
             for key in sorted(row):
                 value = row.get(key)
@@ -658,96 +785,9 @@ def render(records: list[dict[str, Any]], *, generated_at: str) -> str:
             "and compare its SHA-256 with the hash above.</p>"
         )
 
-        # --- the gate grid: which claims survived, and how strongly ---
-        latest = usable[-1] if usable else (rows[-1] if rows else {})
-        checks = Checks(
-            signature_valid=str(latest.get("signature_valid") or ""),
-            signature_error=str(latest.get("signature_error") or ""),
-            tcb_version=str(latest.get("tcb_version") or ""),
-            tcb_status=str(latest.get("tcb_status") or ""),
-            tcb_reference=str(latest.get("tcb_reference") or ""),
-            freshness_bound=str(latest.get("freshness_bound") or ""),
-            freshness_note=str(latest.get("freshness_note") or ""),
-            tls_group=str(latest.get("tls_group") or ""),
-            tls_error=str(latest.get("tls_error") or ""),
-        )
-        gates = score_gates(checks, latest)
-        counts = gate_summary(gates)
-
-        headline = " ".join(
-            f'<span class="g g-{status}">{counts.get(status, 0)} {status}</span>'
-            for status in ("good", "warning", "bad", "unverifiable")
-            if counts.get(status)
-        )
-        parts.append(
-            f'<h3>Checks run <span class="note">{len(gates)} independent checks, '
-            "each with its own result and its own evidence strength. This is a "
-            "record of what was checked, not a rating.</span></h3>"
-        )
-        parts.append(f'<p class="gatebar">{headline}</p>')
-        parts.append("<table><tr><th>gate</th><th>status</th><th>evidence</th></tr>")
-        for gate in gates:
-            parts.append(
-                f'<tr><td class="m">{html.escape(gate.name)}</td>'
-                f'<td><span class="g g-{gate.status.value}">'
-                f'{html.escape(gate.status.value)}</span></td>'
-                f'<td class="m">{html.escape(gate.strength.value)}</td></tr>'
-            )
-        parts.append("</table>")
-
-        # --- the full extracted surface ---
-        latest_row = usable[-1] if usable else (rows[-1] if rows else {})
-        surface = [
-            ("serving role", latest_row.get("serving_role", "")),
-            ("platform", latest_row.get("platform", "")),
-            ("tee type", latest_row.get("tee_type", "")),
-            ("E2EE protocol versions", latest_row.get("e2ee_versions", "")),
-            ("receipt keys published", _fmt_keys(latest_row.get("receipt_key_algos", ""),
-                                                latest_row.get("receipt_key_count", ""))),
-            ("E2EE keys published", _fmt_keys(latest_row.get("e2ee_key_algos", ""),
-                                             latest_row.get("e2ee_key_count", ""))),
-            ("TLS bindings", _fmt_keys(latest_row.get("tls_binding_domains", ""),
-                                      latest_row.get("tls_binding_count", ""))),
-            ("keyset expires", latest_row.get("keyset_not_after", "")),
-            ("key custody held by", latest_row.get("key_custody_provider", "")),
-            ("GPU architecture", latest_row.get("nvidia_arch", "")),
-            ("GPU evidence attached", _count_word(latest_row.get("nvidia_evidence_count", ""),
-                                                 latest_row.get("gpu_evidence_reason", ""))),
-            ("source repo", latest_row.get("repo_url", "")),
-            ("source commit", latest_row.get("repo_commit", "")),
-            ("image provenance", latest_row.get("provenance_image", "")),
-            ("measured boot events", latest_row.get("event_names", "")),
-            ("attestation protocol", latest_row.get("protocol", "")),
-            ("protocol commit", latest_row.get("protocol_commit", "")),
-            ("release", latest_row.get("release_id", "")),
-            ("schema version", latest_row.get("schema_version", "")),
-            ("declared scope", latest_row.get("scope", "")),
-            ("provider self-status", latest_row.get("operational_status", "")),
-            ("TLS binding status", latest_row.get("tls_binding_status", "")),
-            ("front door mode", latest_row.get("frontdoor_mode", "")),
-            ("serving leaf", latest_row.get("serving_leaf_sha256", "")),
-            ("operator key status", latest_row.get("operator_key_status", "")),
-            ("receipts published", latest_row.get("receipt_count", "")),
-            ("HPKE key published", latest_row.get("hpke_key_present", "")),
-            ("document format", latest_row.get("doc_format", "")),
-        ]
-        filled = [(k, v) for k, v in surface if v]
-
-        parts.append(
-            f'<h3>Measured surface <span class="note">'
-            f"{len(filled)} of {len(surface)} fields published</span></h3>"
-        )
-        if filled:
-            parts.append("<table><tr><th>field</th><th>value</th></tr>")
-            for name, value in filled:
-                parts.append(
-                    f'<tr><td class="m">{html.escape(name)}</td>'
-                    f'<td class="m">{html.escape(str(value))}</td></tr>'
-                )
-            parts.append("</table>")
-        else:
-            parts.append('<p class="empty">Nothing readable was published this run.</p>')
-
+        # --- what changed across this source's observations ---
+        # This is the one block that is genuinely about the series rather than
+        # any single run, so it stays at the vendor level.
         changes = find_changes(rows)
         parts.append("<h3>Changes</h3>")
         if changes:

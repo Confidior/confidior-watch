@@ -235,6 +235,71 @@ def test_newest_observation_is_first_on_the_page():
     assert html.index("NEW") < html.index("OLD")
 
 
+def test_checks_verdict_counts_only_the_gates_it_shows():
+    """Regression guard for a bug found by eye: the checks block said "2 good
+    5 unverifiable" while the table listed one of the good ones. The bar and
+    the table come from the same gate list, so their totals must agree."""
+    import re
+
+    from watch.render import _gate_parts
+
+    row = rec("v", "t1", signature_valid="true", freshness_bound="true",
+              tls_group="X25519MLKEM768", measurement="m")
+    markup = "".join(_gate_parts(row))
+    shown = len(re.findall(r"<tr><td class=\"m\">", markup))
+    bar = next(p for p in _gate_parts(row) if "gatebar" in p)
+    counted = sum(int(n) for n in re.findall(r">(\d+) [a-z]+<", bar))
+    assert shown >= 1
+    assert shown == counted
+
+
+def test_each_observation_carries_its_own_surface_not_the_newest_one():
+    """A source with two observations must not show one run's surface twice or
+    drop the other's. Both the gate grid and the surface used to be lifted to
+    the vendor level from `usable[-1]`, so every observation but the newest
+    lost its own. The full field dump is always per-row, so this checks the
+    curated surface table specifically."""
+    import re
+
+    rows = [
+        rec("v", "2026-10-01T06:00:00+00:00", measurement="m1", platform="tdx",
+            serving_role="aggregator", signature_valid="true"),
+        rec("v", "2026-10-09T06:00:00+00:00", measurement="m2", platform="snp",
+            serving_role="worker", signature_valid="false"),
+    ]
+    html = render(rows, generated_at="t")
+    assert html.count('<details class="obs">') == 2
+    assert html.count("<h4>Checks</h4>") == 2
+    assert html.count("Measured surface") == 2
+
+    # Each curated surface table carries that observation's own value.
+    surfaces = re.findall(r'<table class="kv">(.*?)</table>', html, re.S)
+    assert len(surfaces) == 2
+    rendered = [
+        {k: v for k, v in re.findall(
+            r'<td class="k">(.*?)</td><td class="v">(.*?)</td>', s)}
+        for s in surfaces
+    ]
+    assert rendered[0]["serving role"] == "worker"   # newest first
+    assert rendered[1]["serving role"] == "aggregator"
+    assert rendered[0]["platform"] == "snp"
+    assert rendered[1]["platform"] == "tdx"
+
+
+def test_vendor_level_is_stable_summary_only():
+    """The vendor panel keeps the things that are true of the source, not of a
+    run: its name, first-seen, observation count, and its change history."""
+    rows = [
+        rec("v", "2026-10-01T06:00:00+00:00", measurement="m1"),
+        rec("v", "2026-10-09T06:00:00+00:00", measurement="m2"),
+    ]
+    html = render(rows, generated_at="t")
+    # The series-level block stays outside the collapsibles.
+    assert html.count("<h3>Changes</h3>") == 1
+    changes_pos = html.index("<h3>Changes</h3>")
+    assert html.index("</details>") < changes_pos
+
+
 def test_no_fact_chip_renders_with_an_empty_value():
     """A chip whose value is empty reads as a blank label. Every chip states
     something, including "not reported"."""
