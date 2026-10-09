@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import sys
 from pathlib import Path
@@ -106,6 +107,23 @@ def test_parse_nsm_cose_hashes_the_document():
     assert obs["doc_bytes"] == str(len(b"hello world"))
     assert len(obs["measurement"]) == 64  # sha256 hex
     assert obs["cert_spki_sha256"].startswith("642eda68")
+
+
+def test_parse_nsm_cose_counts_der_bytes_not_base64_characters():
+    """cert_spki_der_bytes names DER bytes, so it must decode first. Length over
+    the base64 string reports the transport encoding, which does not move when
+    the key changes and can move when it does not."""
+    der = bytes(range(91))  # a P-256 SPKI is 91 bytes
+    encoded = base64.b64encode(der).decode()
+    (obs,) = parse_nsm_cose({"attestation_document_b64": "aGVsbG8gd29ybGQ=",
+                             "cert_spki_der": encoded})
+    assert len(encoded) != len(der)          # the two really do differ
+    assert obs["cert_spki_der_bytes"] == str(len(der))
+
+
+def test_parse_nsm_cose_absent_spki_is_empty_not_zero():
+    (obs,) = parse_nsm_cose(NSM_SAMPLE)
+    assert obs["cert_spki_der_bytes"] == ""
 
 
 def test_parse_nsm_cose_rejects_bad_base64():

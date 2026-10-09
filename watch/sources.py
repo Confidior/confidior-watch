@@ -204,6 +204,21 @@ def parse_dstack(payload: Any) -> list[dict[str, Any]]:
 # --------------------------------------------------------------------------
 
 
+def _spki_der_bytes(value: Any) -> bytes:
+    """Decode the endpoint's base64 SPKI into DER bytes, or b"" if it is absent.
+
+    The endpoint publishes ``cert_spki_der`` base64-encoded. The record field is
+    named for DER *bytes*, so the length it reports must be the decoded length,
+    not the length of the base64 string.
+    """
+    if not value:
+        return b""
+    try:
+        return base64.b64decode(str(value), validate=True)
+    except (binascii.Error, ValueError):
+        return b""
+
+
 def parse_nsm_cose(payload: Any) -> list[dict[str, Any]]:
     """Parse a ``nsm-cose-sign1`` attestation document wrapper.
 
@@ -229,6 +244,7 @@ def parse_nsm_cose(payload: Any) -> list[dict[str, Any]]:
         except (binascii.Error, ValueError):
             return [{"note": "attestation_document_b64 is not valid base64"}]
 
+    spki_der = _spki_der_bytes(payload.get("cert_spki_der"))
     out = {
         "workload": "inference",
         "platform": "aws-nitro",
@@ -238,7 +254,13 @@ def parse_nsm_cose(payload: Any) -> list[dict[str, Any]]:
         "cert_spki_sha256": str(payload.get("cert_spki_sha256") or ""),
         "doc_bytes": str(size),
         "hpke_key_present": "yes" if payload.get("hpke_public_key") else "no",
-        "cert_spki_der_bytes": str(len(str(payload.get("cert_spki_der") or ""))),
+        # The field counts DER **bytes**, so the base64 the endpoint publishes has
+        # to be decoded first. It previously ran len() over the encoded string,
+        # which reported the base64 length: the PPQ record read 124 for a
+        # certificate whose DER is 91 bytes, the length of a P-256 SPKI. It also
+        # meant a certificate whose key changed but whose encoding kept the same
+        # length would not register, and the log would report no change.
+        "cert_spki_der_bytes": str(len(spki_der)) if spki_der else "",
     }
     if not digest:
         out["note"] = "no attestation document in payload"
