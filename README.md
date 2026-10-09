@@ -28,7 +28,7 @@ publicly-published evidence on a schedule and keeps every observation.
 |---|---|
 | `observations.jsonl` | Append-only. One line per observation — timestamp, vendor, identity fields, the full extracted surface, source URL, HTTP status, SHA-256 of the raw response |
 | `watch/timeline.py` | Analysis over the log: what changed between consecutive observations, which fields count as identity, how long a vendor has been stable |
-| A daily Rekor anchor | The day's digest submitted to Sigstore, so the history is tamper-evident to a stranger |
+| A Rekor anchor | The run's log digest submitted to Sigstore, so the history is tamper-evident to a stranger |
 
 There is no page. The log is the published artifact, and a consumer renders it.
 
@@ -44,7 +44,7 @@ These are load-bearing, and each has a test enforcing it.
 - **Failures surface themselves.** If no source returns readable evidence, the
   job opens an issue on itself. One bad week is normal; zero readable evidence
   means something needs a human.
-- **Depth over breadth.** Three sources, deliberately. Five to eight with
+- **Depth over breadth.** Five sources, deliberately. Five to eight with
   unbroken history proves continuity; sixty with patchy history proves nothing.
   Every addition costs adapter rot forever.
 - **The worst failure is visible.** A heartbeat record is written every run, so a
@@ -57,16 +57,20 @@ These are load-bearing, and each has a test enforcing it.
 Each parser was written against a response captured live on 2026-10-09. None was
 written against documentation, because for these endpoints there is none.
 
-| Vendor | Endpoint | Platform | Shape |
+| Vendor | Endpoint | Platform | Nonce |
 |---|---|---|---|
-| RedPill | `api.redpill.ai/v1/attestation/report` | Intel TDX | dstack `aci/1` |
-| Phala | `inference.phala.com/v1/aci/attestation` | Intel TDX | dstack `aci/1` |
-| PPQ | `api.ppq.ai/attestation` | AWS Nitro | `nsm-cose-sign1` |
+| RedPill | `api.redpill.ai/v1/attestation/report` | Intel TDX | accepted, echoed |
+| Phala | `inference.phala.com/v1/aci/attestation` | Intel TDX | accepted, not echoed |
+| PPQ | `api.ppq.ai/attestation` | AWS Nitro | none |
+| Tinfoil | `inference.tinfoil.sh/.well-known/tinfoil-attestation` | AMD SEV-SNP | required for the full v3 evidence set |
+| Confidential AI | `api.confidential.ai/attestation` | Confidential AI C8S | required; returns 400 without one |
 
 ### What identity means here
 
-The log watches the fields that change when a deployment changes: `compose-hash`,
-`os-image-hash`, `app-id`, `mr-kms`, `keyset_digest`, `repo_commit`, `cert_spki_sha256`.
+The log watches the fields that change when a deployment changes: `measurement`,
+`tcb_version`, `os_image_hash`, `app_id`, `mr_kms`, `keyset_digest`, `repo_commit`,
+`cert_spki_sha256`, and the release and protocol identifiers alongside them. The
+full list is `IDENTITY_FIELDS` in `watch/timeline.py`.
 
 Two things are deliberately excluded from identity:
 
@@ -83,10 +87,10 @@ publication posture, not a judgement.
 
 | Vendor | Status on 2026-10-09 |
 |---|---|
-| Tinfoil | `api.tinfoil.sh/v1/attestation/report` exists but rejects unencrypted bodies (HTTP 426, `EHBP_REQUIRED`). Reading it means implementing their client-side encryption — authentication in effect |
-| NEAR AI | `cloud-api.near.ai/v1/attestation/report` returns 401. Keyed |
-| Chutes | `api.chutes.ai/v1/attestation` returns 429 under plain GET |
-| Venice, Maple, NanoGPT, Privatemode | No public attestation endpoint located at the obvious paths |
+| Tinfoil (`api.tinfoil.sh/v1/attestation/report`) | Exists but rejects unencrypted bodies (HTTP 426, `EHBP_REQUIRED`). Reading it means implementing their client-side encryption — authentication in effect. Tinfoil is still crawled through its `.well-known` path, above |
+| NEAR AI | `cloud-api.near.ai/v1/attestation/report` returns 401 — requires a key |
+| Chutes | `api.chutes.ai/v1/attestation` returns 429 under a plain GET |
+| Venice, Maple, NanoGPT, Privatemode | No public attestation endpoint found at the obvious paths |
 
 Several of these may publish evidence through their own authenticated tooling.
 That is a different claim from publishing it openly, and only the second is
@@ -96,18 +100,21 @@ observable by a neutral third party.
 
 ```sh
 pip install -r requirements.txt
+pip install pytest          # only to run the suite
 python -m watch.collector --log observations.jsonl --anchor
 python -m pytest tests/ -q
 ```
 
-`--dry-run` prints without writing.
+`--dry-run` prints without writing. The run does not require the engine: without
+a `confidior-engine` checkout beside this repo, the signature check records
+`engine not importable` and the run still completes (see Provenance).
 
 ## What to look at first
 
 The first genuinely interesting finding is already in the log. RedPill and Phala
-return the **same** `workload_keyset_digest` and the **same** `compose-hash`.
-RedPill's payload additionally embeds Phala domains and the dstack
-`private-ai-gateway` compose. Two providers, one measured workload.
+return the **same** `keyset_digest` and the **same** `os_image_hash`. RedPill's
+payload additionally embeds Phala domains and the dstack `private-ai-gateway`
+compose. Two providers, one measured workload.
 
 That is the reseller-attribution problem, visible from public endpoints without
 asking anyone's permission — and it is exactly the kind of thing a
@@ -128,3 +135,16 @@ to it, and that is not this repository's job.
 `watch/rekor_vendored.py` is a frozen copy of the anchoring path from
 `confidior-engine` (Apache-2.0), recorded at the top of that file. It is vendored
 rather than imported on purpose: the clock must not depend on anything that moves.
+
+The **signature** check verifies a quote against the vendor root of trust, and
+the verifiers for that live in `confidior-engine`
+(`src/ingest/adapters/tdx.py` and `nitro.py`). `watch/checks.py` imports them at
+call time if a checkout is reachable — via `CONFIDIOR_ENGINE_PATH`, or a sibling
+`confidior-engine` directory. When it is not, the check records
+`engine not importable` and the run continues; the log records the gap rather
+than hiding it. Everything else — freshness, wire, the nonce and TLS checks —
+is done here and needs no engine.
+
+So: clone this repo alone and it runs, records all five sources, and says of each
+signature that it could not check it. Put the engine beside it and that column
+fills in.

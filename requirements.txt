@@ -1,1 +1,2 @@
 cryptography>=48.0.0
+cvm-attest>=1.0.0
