@@ -13,6 +13,8 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
+    "mypy>=1.11",
+    "ruff>=0.6",
 ]
 
 [tool.pytest.ini_options]
@@ -24,3 +26,23 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test fixtures carry full hashes, PEM blobs and base64 bodies. They cannot be
+# wrapped without changing the value under test.
+"tests/*" = ["E501"]
+
+[tool.ruff.format]
+# Frozen copy of the engine's anchoring path. Reformatting it silently would be
+# the one change its own docstring warns against, so it is left byte-exact.
+exclude = ["watch/rekor_vendored.py"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["watch"]
+# The verifiers are imported at call time behind try/except, and this repo must
+# typecheck without them: src.* is the engine's own package, cvm_attest ships no
+# py.typed marker, and sev_pytools is an optional dependency for the AMD path.
+[[tool.mypy.overrides]]
+module = ["src.*", "cvm_attest.*", "sev_pytools.*"]
+ignore_missing_imports = true

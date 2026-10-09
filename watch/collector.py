@@ -221,7 +221,6 @@ class Observation:
     snp_tcb: str = ""
     snp_report_data: str = ""
     report_data: str = ""
-    nonce: str = ""
     # The endorsed hashes and the bound key material. Recording them makes the
     # quote-to-key chain checkable after the fact instead of taken on faith.
     crypto_material_hash: str = ""

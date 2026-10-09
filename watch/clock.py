@@ -23,12 +23,12 @@ Rekor inclusion proof establishes independently of this timestamp.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 
 def utc_now() -> datetime:
     """The current instant, timezone-aware and in UTC."""
-    return datetime.now(UTC)
+    return datetime.now(timezone.utc)
 
 
 def utc_now_iso() -> str:
