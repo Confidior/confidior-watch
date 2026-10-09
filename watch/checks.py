@@ -8,8 +8,9 @@ Each run, per source, four independent checks:
 
 1. **Signature** -- the quote verifies against the vendor's root of trust
    (Intel PCK chain for TDX, COSE/CBOR against the AWS Nitro root for Nitro).
-2. **TCB** -- the TCB version, read from the quote and (where an FMSPC is
-   available) compared against Intel's published current TCB.
+2. **TCB** -- the TCB security version, read from the quote. It is recorded as
+   published; it is *not* yet compared against Intel's current TCB for the
+   platform, so every observation reports no comparison made.
 3. **Freshness** -- whether the response was bound to a challenge this run
    generated, rather than replayed.
 4. **Wire** -- what TLS key exchange the endpoint actually negotiates, measured
@@ -107,7 +108,7 @@ class Checks:
     signature_valid: str = ""      # "true" / "false" / "" (not attempted)
     signature_error: str = ""
     tcb_version: str = ""
-    tcb_status: str = ""           # Intel's current / outdated / unknown
+    tcb_status: str = ""           # current / outdated / unknown; never set today, no comparison is made
     tcb_reference: str = ""
     freshness_bound: str = ""      # "true" / "false" / ""
     freshness_note: str = ""

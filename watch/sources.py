@@ -17,11 +17,13 @@ The rules that shaped this file:
 
 Deliberately excluded, with reasons recorded so nobody re-adds them by accident:
 
-- ``tinfoil`` -- ``api.tinfoil.sh/v1/attestation/report`` exists but rejects
-  unencrypted bodies (HTTP 426, ``EHBP_REQUIRED``). Reading it would require
-  implementing their client-side encryption. That is authentication in effect,
-  and it would make this crawler a special-case client rather than a reader of
-  public data.
+- ``tinfoil`` (the ``api.tinfoil.sh/v1/attestation/report`` path only) --
+  that path exists but rejects unencrypted bodies (HTTP 426, ``EHBP_REQUIRED``).
+  Reading it would require implementing their client-side encryption. That is
+  authentication in effect, and it would make this crawler a special-case client
+  rather than a reader of public data. Tinfoil *is* crawled, through its
+  ``.well-known`` path, which serves its report without a client. See
+  ``default_sources`` and ``parse_tinfoil`` below.
 - ``near`` -- ``cloud-api.near.ai/v1/attestation/report`` returns 401. Keyed.
 - ``chutes`` -- ``api.chutes.ai/v1/attestation`` returns 429 under plain GET;
   per-model evidence endpoints appear to need the provider's own flow.
@@ -325,11 +327,11 @@ def parse_c8s(payload: Any) -> list[dict[str, Any]]:
 
 
 # --------------------------------------------------------------------------
-# The v0 source set.
+# The v1 source set.
 #
-# Three sources, deliberately. See the internal strategy note section 6: five to eight
-# with unbroken history proves continuity; sixty with patchy history proves
-# nothing. Every addition costs adapter rot forever.
+# Five sources, deliberately. Five to eight with unbroken history proves
+# continuity; sixty with patchy history proves nothing. Every addition costs
+# adapter rot forever.
 # --------------------------------------------------------------------------
 
 
@@ -442,7 +444,8 @@ def default_sources() -> list[Source]:
 #    is the SPKI hash. Small divergence, worth not repeating.
 #
 # No attestation is *published* on the release assets: the hardware-measurements
-# .json named in an earlier draft of the internal strategy note has never existed (404).
+# .json named in an earlier draft has never existed (404 at both the pinned and
+# latest paths). The live endpoint below is what the crawl reads.
 
 TINFOIL_ATTESTATION_URL = (
     "https://inference.tinfoil.sh/.well-known/tinfoil-attestation"

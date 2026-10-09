@@ -3,7 +3,7 @@ name: Continuity log
 # Records what vendors publish about their own attestation evidence, weekly.
 #
 # Why weekly rather than daily: measurement changes are rare events, so weekly
-# loses almost nothing. See docs/the internal strategy note section 6.
+# loses almost nothing, and a weekly cadence costs five times less adapter rot.
 #
 # Self-sustaining: GitHub disables scheduled workflows after 60 days without
 # repository activity. This job commits every run, which counts as activity, so

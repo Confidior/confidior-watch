@@ -6,9 +6,9 @@ evidence, over time, so that point-in-time observations become a time series.
 A single capture is an anecdote. A thousand captures is a history. This is the
 mechanism that turns one into the other.
 
-What it is not: a service, a dashboard, a grader. It observes; the engine judges.
-There is no uptime promise and no account. Its worst failure is a gap in a
-timeline, and for an evidence archive silence never reads as a claim.
+What it is not: a service, a dashboard, a grader. It observes; it does not
+grade. There is no uptime promise and no account. Its worst failure is a gap in
+a timeline, and for an evidence archive silence never reads as a claim.
 """
 
 from __future__ import annotations
