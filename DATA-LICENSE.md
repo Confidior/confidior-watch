@@ -1,7 +1,7 @@
 # Observation data licence
 
-The observation log (`observations.jsonl`) and the rendered page (`docs/index.html`)
-are released under **CC0 1.0 Universal** (public domain dedication).
+The observation log (`observations.jsonl`) is released under **CC0 1.0 Universal**
+(public domain dedication).
 
 To the extent possible under law, all copyright and related rights to the
 observation data in this repository are waived.

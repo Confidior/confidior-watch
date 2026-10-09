@@ -110,21 +110,3 @@ def test_strength_ladder_is_ordered_strongest_first():
     assert order[0] is EvidenceStrength.VERIFIED
     assert order[1] is EvidenceStrength.CORROBORATED
     assert order.index(EvidenceStrength.DECLARED) > order.index(EvidenceStrength.CORROBORATED)
-
-
-def test_page_shows_the_gate_grid():
-    """The page must show the gates, not just the raw check fields."""
-    from tests.test_render import rec
-    from watch.render import render
-
-    row = rec(
-        "v", "2026-10-09T00:00:00+00:00", workload="gateway",
-        signature_valid="true", tcb_status="current",
-        tls_group="X25519MLKEM768", freshness_bound="true",
-        freshness_note="echoed", measurement="a" * 64,
-        gpu_count="0", nvidia_evidence_count="0",
-    )
-    html = render([row], generated_at="t")
-    assert "Checks run" in html
-    assert "not a rating" in html
-    assert "GPU evidence consistency" in html

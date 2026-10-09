@@ -26,9 +26,11 @@ publicly-published evidence on a schedule and keeps every observation.
 
 | Artifact | What it is |
 |---|---|
-| `observations.jsonl` | Append-only. One line per observation — timestamp, vendor, identity fields, source URL, HTTP status, SHA-256 of the raw response |
-| `docs/index.html` | One page. Per vendor: the timeline, every change with its date, and the headline number — *unchanged since X* |
+| `observations.jsonl` | Append-only. One line per observation — timestamp, vendor, identity fields, the full extracted surface, source URL, HTTP status, SHA-256 of the raw response |
+| `watch/timeline.py` | Analysis over the log: what changed between consecutive observations, which fields count as identity, how long a vendor has been stable |
 | A daily Rekor anchor | The day's digest submitted to Sigstore, so the history is tamper-evident to a stranger |
+
+There is no page. The log is the published artifact, and a consumer renders it.
 
 ## Design rules
 
@@ -95,7 +97,6 @@ observable by a neutral third party.
 ```sh
 pip install -r requirements.txt
 python -m watch.collector --log observations.jsonl --anchor
-python -m watch.render --log observations.jsonl --out docs/index.html
 python -m pytest tests/ -q
 ```
 
