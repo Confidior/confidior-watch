@@ -206,3 +206,28 @@ def test_snp_tcb_is_not_read_from_guessed_offsets():
     assert _snp_tcb_version(b"\x00" * 8) == ""
     assert _snp_tcb_version(b"") == ""
     assert _snp_tcb_version(b"\xff" * 1184) == ""
+
+
+def test_gunzip_is_bounded_so_a_bomb_cannot_take_the_run_down():
+    """gzip expands small input enormously and the body is a vendor's. Without a
+    ceiling the whole expansion is read into memory at once."""
+    import base64 as b64
+    import gzip
+
+    from watch.sources import MAX_DECOMPRESSED_BYTES, _gunzip_b64
+
+    bomb = gzip.compress(b"\x00" * (4 * MAX_DECOMPRESSED_BYTES), 9)
+    assert len(bomb) < MAX_DECOMPRESSED_BYTES            # it really is small
+    out = _gunzip_b64(b64.b64encode(bomb).decode())
+    assert len(out) == MAX_DECOMPRESSED_BYTES            # bounded, not 4x
+
+
+def test_gunzip_leaves_small_bodies_intact():
+    import base64 as b64
+    import gzip
+
+    from watch.sources import _gunzip_b64
+
+    raw = b'{"items": []}'
+    assert _gunzip_b64(b64.b64encode(gzip.compress(raw)).decode()) == raw
+    assert _gunzip_b64(b64.b64encode(raw).decode()) == raw   # not gzipped

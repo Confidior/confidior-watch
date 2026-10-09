@@ -492,16 +492,32 @@ def tinfoil_url() -> tuple[str, str]:
     return f"{TINFOIL_ATTESTATION_URL}?nonce={nonce}", nonce
 
 
-def _gunzip_b64(value: str) -> bytes:
-    """Decode the base64+gzip envelope Tinfoil uses for evidence bodies."""
+#: Ceiling on a single decompressed evidence body, in bytes.
+#:
+#: The bodies are vendor-published and are decompressed with no ability to trust
+#: them. Real ones are kilobytes: the Tinfoil evidence set is tens of KB. Without
+#: a ceiling, a compressed body that expands thousands of times over, by accident
+#: or not, is read into memory in full and takes the run down. A body over the
+#: ceiling is truncated here and the caller records it rather than the run dying.
+MAX_DECOMPRESSED_BYTES = 8 * 1024 * 1024
+
+
+def _gunzip_b64(value: str, *, limit: int = MAX_DECOMPRESSED_BYTES) -> bytes:
+    """Decode the base64+gzip envelope Tinfoil uses for evidence bodies.
+
+    Bounded: at most ``limit`` decompressed bytes are returned. gzip can expand
+    a small field enormously, and the input is a vendor's, so the read is capped
+    rather than trusted to be small.
+    """
     import base64 as _b64
     import gzip as _gzip
     import io as _io
 
     raw = _b64.b64decode(value)
     if raw[:2] == b"\x1f\x8b":
-        return _gzip.GzipFile(fileobj=_io.BytesIO(raw)).read()
-    return raw
+        with _gzip.GzipFile(fileobj=_io.BytesIO(raw)) as gz:
+            return gz.read(limit)
+    return raw[:limit]
 
 
 def parse_tinfoil(payload: Any) -> list[dict[str, Any]]:
