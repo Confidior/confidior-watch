@@ -37,6 +37,22 @@ jobs:
 
       - uses: astral-sh/setup-uv@v5
 
+      # The wire check offers the PQ hybrid groups (X25519MLKEM768 and friends)
+      # to see what each endpoint negotiates. OpenSSL added those groups in 3.5;
+      # the image ships 3.0, where passing them to -groups fails before the
+      # connection is made, so every observation records 'group not reported'
+      # and the column silently holds nothing. Build 3.5 from source.
+      - name: Install OpenSSL with the PQ groups
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential perl >/dev/null
+          curl -sSL https://github.com/openssl/openssl/releases/download/openssl-3.5.0/openssl-3.5.0.tar.gz -o /tmp/openssl.tar.gz
+          tar -xzf /tmp/openssl.tar.gz -C /tmp
+          cd /tmp/openssl-3.5.0
+          ./Configure --prefix=/usr/local/openssl35 --libdir=lib no-docs >/dev/null
+          make -j"$(nproc)" >/dev/null 2>&1
+          sudo make install_sw >/dev/null 2>&1
+
       - name: Install
         run: uv sync --locked
 
@@ -46,7 +62,9 @@ jobs:
       - name: Observe
         id: observe
         run: |
+          PATH="/usr/local/openssl35/bin:$PATH" \
           uv run python -m watch.collector --log observations.jsonl --anchors anchors.jsonl --anchor
+          openssl version
 
       - name: Detect sources that returned nothing usable
         id: check

@@ -288,6 +288,13 @@ def measure_tls_group(host: str, *, port: int = 443, runner: Any = None) -> tupl
             return group, ""
     if "handshake failure" in out.lower() or "alert" in out.lower():
         return "", "no PQ hybrid accepted"
+    # The client refused the group before reaching the server. OpenSSL added the
+    # MLKEM groups in 3.5, and the stock image this runs on in CI ships 3.0, so
+    # the probe is unusable there. That is a fact about the probe, not about the
+    # endpoint, and it must not be recorded as one: "group not reported" reads as
+    # a property of the host when the host was never reached.
+    if "ssl_conf_cmd" in out.lower() or "unknown group" in out.lower():
+        return "", "openssl cannot offer the PQ groups (needs OpenSSL 3.5+)"
     return "", "group not reported"
 
 

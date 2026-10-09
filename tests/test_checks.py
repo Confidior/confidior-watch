@@ -171,6 +171,18 @@ def test_tls_handshake_failure_is_reported_not_guessed():
     assert "PQ hybrid" in err or "not reported" in err
 
 
+def test_tls_probe_that_cannot_offer_the_group_blames_the_probe_not_the_host():
+    """OpenSSL below 3.5 does not know the MLKEM group names, so -groups fails
+    before any connection. Reporting that as 'group not reported' would state a
+    fact about the endpoint that was never measured -- and the runner's stock
+    OpenSSL was 3.0, so every CI observation said exactly that."""
+    fake = lambda argv: "Call to SSL_CONF_cmd(-groups, X25519MLKEM768) failed\n"  # noqa: E731
+    group, err = measure_tls_group("example.com", runner=fake)
+    assert group == ""
+    assert "OpenSSL 3.5" in err
+    assert "not reported" not in err
+
+
 def test_tls_without_a_host_makes_no_claim():
     assert measure_tls_group("") == ("", "no host")
 

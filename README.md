@@ -155,3 +155,10 @@ is done here and needs no engine.
 So: clone this repo alone and it runs, records all five sources, and says of each
 signature that it could not check it. Put the engine beside it and that column
 fills in.
+
+One environment requirement, for the **wire** check. It offers the PQ hybrid
+groups (`X25519MLKEM768` and friends) to each endpoint and records what is chosen,
+which needs `openssl` 3.5 or later: the groups were added in 3.5, and on 3.0 the
+probe cannot name them, so it records what it could not measure rather than
+inventing a result. Distros and CI images commonly ship 3.0, which is why the
+scheduled run builds 3.5 rather than using the image's copy.
