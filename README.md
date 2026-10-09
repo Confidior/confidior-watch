@@ -114,9 +114,10 @@ records `engine not importable` and the run still completes (see Provenance).
 ## What to look at first
 
 The first genuinely interesting finding is already in the log. RedPill and Phala
-return the **same** `keyset_digest` and the **same** `os_image_hash`. RedPill's
-payload additionally embeds Phala domains and the dstack `private-ai-gateway`
-compose. Two providers, one measured workload.
+return the **same** `keyset_digest`, the **same** `os_image_hash`, the same
+`tls_binding_domains` (both `api.redpill.ai` and `inference.phala.com` among
+them), and both name the same dstack `private-ai-gateway` repository. Two
+providers, one measured workload.
 
 That is the reseller-attribution problem, visible from public endpoints without
 asking anyone's permission — and it is exactly the kind of thing a
