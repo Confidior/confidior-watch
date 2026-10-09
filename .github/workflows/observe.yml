@@ -43,26 +43,42 @@ jobs:
       # connection is made, so every observation records 'group not reported'
       # and the column silently holds nothing. Build 3.5 from source.
       #
+      # Built static (no-shared) on purpose. A shared build installs libcrypto
+      # into a prefix that is not on the loader's search path and the build adds no
+      # RPATH, so the installed binary aborts on startup with 'error while loading
+      # shared libraries'. The probe captures that together with stderr and finds
+      # none of the strings it looks for, so it records 'group not reported' -- the
+      # same empty column, now with a build that reported success. Static removes
+      # the runtime library search altogether and takes the failure mode with it.
+      #
       # This step must not abort the run. An aborted run is a gap in the timeline
       # and the timeline is the asset, so a failed build costs the wire column and
       # nothing else: the observations are still collected, and each one records
       # that the probe could not offer the group rather than inventing a result.
-      # continue-on-error keeps that trade; the version lines below keep it visible.
+      # continue-on-error keeps that trade, and the self-check below keeps a build
+      # that cannot run from passing as a working one.
       - name: Build OpenSSL with the PQ groups
         id: openssl
         continue-on-error: true
         run: |
           set -euo pipefail
           echo "image openssl: $(openssl version)"
+          sudo rm -rf /usr/local/openssl
           sudo apt-get update -qq
           sudo apt-get install -y -qq build-essential perl
           curl -sSLf https://github.com/openssl/openssl/releases/download/openssl-3.5.1/openssl-3.5.1.tar.gz -o /tmp/openssl.tar.gz
           tar -xzf /tmp/openssl.tar.gz -C /tmp
           cd /tmp/openssl-3.5.1
-          ./Configure --prefix=/usr/local/openssl --libdir=lib
+          ./Configure no-shared --prefix=/usr/local/openssl
           make -j"$(nproc)"
           sudo make install_sw
-          echo "built openssl: $(/usr/local/openssl/bin/openssl version)"
+          # Prove the installed binary runs and really knows the groups, rather
+          # than trusting that install_sw succeeded. A static openssl cannot fail
+          # this way, and a shared one that cannot load its libraries prints nothing
+          # and fails here instead of silently emptying the wire column.
+          /usr/local/openssl/bin/openssl version
+          /usr/local/openssl/bin/openssl list -tls-groups | grep -qw X25519MLKEM768
+          echo "self-check: the installed openssl runs and lists X25519MLKEM768"
 
       - name: Install
         run: uv sync --locked
