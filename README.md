@@ -27,8 +27,8 @@ publicly-published evidence on a schedule and keeps every observation.
 | Artifact | What it is |
 |---|---|
 | `observations.jsonl` | Append-only. One line per observation — timestamp, vendor, identity fields, the full extracted surface, source URL, HTTP status, SHA-256 of the raw response |
+| `anchors.jsonl` | Append-only. One line per anchoring attempt — the SHA-256 of the log at that point, and the Rekor `uuid` and log URL the proof landed at, so a stranger can fetch it rather than trust it |
 | `watch/timeline.py` | Analysis over the log: what changed between consecutive observations, which fields count as identity, how long a vendor has been stable |
-| A Rekor anchor | The run's log digest submitted to Sigstore, so the history is tamper-evident to a stranger |
 
 There is no page. The log is the published artifact, and a consumer renders it.
 
@@ -105,7 +105,7 @@ Dependencies and dev tools are declared in `pyproject.toml` and pinned in
 `uv.lock`. This needs [uv](https://docs.astral.sh/uv/):
 
 ```sh
-uv run python -m watch.collector --log observations.jsonl --anchor
+uv run python -m watch.collector --log observations.jsonl --anchors anchors.jsonl --anchor
 uv run pytest tests/ -q
 ```
 

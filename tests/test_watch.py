@@ -10,8 +10,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from watch.collector import (  # noqa: E402
+    Anchor,
     Observation,
     anchor_digest_soft,
+    append_anchor,
     append_to_log,
     collect,
     day_digest,
@@ -264,6 +266,76 @@ def test_anchor_reports_success():
 
 def test_anchor_of_empty_digest_is_skipped():
     assert anchor_digest_soft("")["anchored"] is False
+
+
+def test_anchor_record_carries_what_a_stranger_needs_to_find_it(tmp_path: Path):
+    """A digest alone proves nothing if the proof cannot be located again."""
+    anchors = tmp_path / "anchors.jsonl"
+    rec = Anchor(
+        anchored_at="2026-10-09T00:00:00+00:00",
+        digest="d" * 64,
+        anchored=True,
+        uuid="u-1",
+        log_index="3154986290",
+        rekor_url="https://rekor.sigstore.dev",
+    )
+    append_anchor(anchors, rec)
+    got = json.loads(anchors.read_text().strip())
+    assert got["digest"] == "d" * 64
+    assert got["uuid"] == "u-1"
+    assert got["rekor_url"] == "https://rekor.sigstore.dev"
+    assert got["anchored"] is True
+
+
+def test_append_anchor_is_append_only(tmp_path: Path):
+    anchors = tmp_path / "anchors.jsonl"
+    append_anchor(anchors, Anchor(anchored_at="t1", digest="a" * 64, anchored=True, uuid="u1"))
+    append_anchor(anchors, Anchor(anchored_at="t2", digest="b" * 64, anchored=True, uuid="u2"))
+    lines = anchors.read_text().strip().splitlines()
+    assert len(lines) == 2
+    assert json.loads(lines[0])["uuid"] == "u1"
+    assert json.loads(lines[1])["uuid"] == "u2"
+
+
+def test_a_failed_anchor_is_recorded_rather_than_omitted(tmp_path: Path):
+    """An anchor that silently did not happen would leave the log looking
+    anchored when it is not. The attempt is recorded either way."""
+    result = anchor_digest_soft(
+        "abc123", anchor=lambda d: (_ for _ in ()).throw(RuntimeError("down"))
+    )
+    anchors = tmp_path / "anchors.jsonl"
+    append_anchor(
+        anchors,
+        Anchor(
+            anchored_at="2026-10-09T00:00:00+00:00",
+            digest="abc123",
+            anchored=bool(result.get("anchored")),
+            reason=str(result.get("reason", "")),
+        ),
+    )
+    got = json.loads(anchors.read_text().strip())
+    assert got["anchored"] is False
+    assert "down" in got["reason"]
+    assert got["uuid"] == ""
+
+
+def test_anchor_digest_returns_the_url_the_proof_landed_at():
+    """The uuid alone does not say which transparency log holds the entry."""
+    from watch.rekor_vendored import anchor_digest
+
+    posted = {}
+
+    def poster(url, body):
+        posted["url"] = url
+        return {"uuid-1": {"logIndex": 7}}
+
+    out = anchor_digest(
+        "a" * 64,
+        poster=poster,
+        url_fetcher=lambda _u: {"rekorTlogUrls": [{"url": "https://rekor.example"}]},
+    )
+    assert out["rekor_url"] == "https://rekor.example"
+    assert posted["url"].startswith("https://rekor.example/")
 
 
 # ---------------------------------------------------------------------------

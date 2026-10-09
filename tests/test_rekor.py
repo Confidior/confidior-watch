@@ -135,7 +135,9 @@ def test_anchor_digest_returns_the_log_index_and_uuid():
         url_fetcher=_url_fetcher,
         poster=lambda _u, _b: {"uuid-9": {"logIndex": 99}},
     )
-    assert result == {"log_index": 99, "uuid": "uuid-9"}
+    # rekor_url travels with the entry: the uuid alone does not say which log
+    # holds it, and a proof that cannot be located is not a proof.
+    assert result == {"log_index": 99, "uuid": "uuid-9", "rekor_url": "https://rekor.example"}
 
 
 def test_anchor_digest_uses_the_url_it_discovered():

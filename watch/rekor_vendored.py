@@ -204,4 +204,11 @@ def anchor_digest(
     if rekor_url is None:
         rekor_url = get_rekor_url(fetcher=url_fetcher)
     result = submit_entry(entry, rekor_url, poster=poster)
-    return {"log_index": result.get("logIndex"), "uuid": result.get("uuid", "")}
+    # The url is returned with the entry so a caller can record where the proof
+    # landed. Without it the anchor is submitted and then unfindable: the uuid
+    # alone does not say which transparency log holds it.
+    return {
+        "log_index": result.get("logIndex"),
+        "uuid": result.get("uuid", ""),
+        "rekor_url": rekor_url,
+    }

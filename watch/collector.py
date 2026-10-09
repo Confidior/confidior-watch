@@ -386,6 +386,37 @@ def append_to_log(path: Path, observations: list[Observation]) -> int:
     return len(observations)
 
 
+@dataclass
+class Anchor:
+    """One anchoring attempt: which digest was submitted, and where it landed.
+
+    An anchor is only worth recording if a stranger can find it again. The digest
+    says what was submitted, and uuid plus rekor_url say where the transparency
+    log entry is, so the proof can be fetched rather than taken on faith. A failed
+    attempt is recorded too: an anchor that silently did not happen would leave
+    the log looking anchored when it is not.
+    """
+
+    anchored_at: str
+    digest: str
+    anchored: bool
+    uuid: str = ""
+    log_index: str = ""
+    rekor_url: str = ""
+    reason: str = ""
+
+    def to_json(self) -> str:
+        return json.dumps(asdict(self), sort_keys=True, separators=(",", ":"))
+
+
+def append_anchor(path: Path, anchor: Anchor) -> int:
+    """Append one anchor record. Append-only, like the observation log."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as f:
+        f.write(anchor.to_json() + "\n")
+    return 1
+
+
 def day_digest(paths: list[Path]) -> str:
     """SHA-256 over a set of files, for anchoring.
 
@@ -428,6 +459,7 @@ def anchor_digest_soft(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--log", type=Path, default=Path("observations.jsonl"))
+    parser.add_argument("--anchors", type=Path, default=Path("anchors.jsonl"))
     parser.add_argument("--anchor", action="store_true", help="Anchor the day's digest to Rekor.")
     parser.add_argument("--dry-run", action="store_true", help="Print without writing.")
     parser.add_argument("-v", "--verbose", action="store_true")
@@ -453,10 +485,21 @@ def main(argv: list[str] | None = None) -> int:
     if args.anchor:
         digest = day_digest([args.log])
         result = anchor_digest_soft(digest)
-        if result.get("anchored"):
-            logger.info("anchored %s: %s", digest[:16], result["rekor"])
+        rekor = result.get("rekor") or {}
+        record = Anchor(
+            anchored_at=stamp,
+            digest=digest,
+            anchored=bool(result.get("anchored")),
+            uuid=str(rekor.get("uuid", "")),
+            log_index=str(rekor.get("log_index") or ""),
+            rekor_url=str(rekor.get("rekor_url", "")),
+            reason=str(result.get("reason", "")),
+        )
+        append_anchor(args.anchors, record)
+        if record.anchored:
+            logger.info("anchored %s: %s", digest[:16], record.uuid)
         else:
-            logger.warning("not anchored: %s", result.get("reason"))
+            logger.warning("not anchored, recorded as such: %s", record.reason)
 
     return 0
 
