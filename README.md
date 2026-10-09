@@ -129,8 +129,9 @@ per-provider continuity log surfaces and a pricing table cannot.
 ## Licence
 
 - **Code:** Apache-2.0 (`LICENSE.md`)
-- **Observation data (`observations.jsonl`):** CC0 — public domain. Reuse freely,
-  no permission needed, no attribution required.
+- **Observation data (`observations.jsonl`):** CC0 — public domain
+  (`DATA-LICENSE.md`). Reuse freely, no permission needed, no attribution
+  required.
 
 The data is deliberately maximally permissive. Anyone can cron the same endpoints;
 the observation is worth little on its own. What is hard is the judgment applied
