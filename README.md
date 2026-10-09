@@ -32,6 +32,26 @@ publicly-published evidence on a schedule and keeps every observation.
 
 There is no page. The log is the published artifact, and a consumer renders it.
 
+### Verifying an anchor
+
+`anchors.jsonl` says where the log landed in the public transparency log, so a
+stranger can confirm it rather than trust it. Fetch the entry by the recorded
+index:
+
+```
+curl -sS "https://rekor.sigstore.dev/api/v1/log/entries?logIndex=<log_index>"
+```
+
+Then check two things: the returned `uuid` equals the record's `uuid`, and the
+entry's `spec.data.hash.value` is the SHA-256 of the `digest` string as written in
+`anchors.jsonl`.
+
+Note the second hash. `digest` is the SHA-256 of `observations.jsonl`, and Rekor
+stores the SHA-256 of that digest, so the value committed to the log is one step
+further on. Searching the log for `digest` itself returns nothing, which is not
+the same as the anchor being absent: fetch by `log_index` or `uuid`, both of which
+are recorded for exactly this reason.
+
 ## Design rules
 
 These are load-bearing. Most are enforced by a test in `tests/`; the one that
