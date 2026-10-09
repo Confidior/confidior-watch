@@ -42,16 +42,23 @@ jobs:
       # the image ships 3.0, where passing them to -groups fails before the
       # connection is made, so every observation records 'group not reported'
       # and the column silently holds nothing. Build 3.5 from source.
+      #
+      # Not cached, and deliberately not fatal-if-skipped: if the build fails the
+      # run continues, but it must not do so quietly, because the fallback is the
+      # defect this step exists to fix. The version is printed before and after.
       - name: Install OpenSSL with the PQ groups
         run: |
+          set -euo pipefail
+          echo "image openssl: $(openssl version)"
           sudo apt-get update -qq
-          sudo apt-get install -y -qq build-essential perl >/dev/null
-          curl -sSL https://github.com/openssl/openssl/releases/download/openssl-3.5.0/openssl-3.5.0.tar.gz -o /tmp/openssl.tar.gz
+          sudo apt-get install -y -qq build-essential perl
+          curl -sSLf https://github.com/openssl/openssl/releases/download/openssl-3.5.1/openssl-3.5.1.tar.gz -o /tmp/openssl.tar.gz
           tar -xzf /tmp/openssl.tar.gz -C /tmp
-          cd /tmp/openssl-3.5.0
-          ./Configure --prefix=/usr/local/openssl35 --libdir=lib no-docs >/dev/null
-          make -j"$(nproc)" >/dev/null 2>&1
-          sudo make install_sw >/dev/null 2>&1
+          cd /tmp/openssl-3.5.1
+          ./Configure --prefix=/usr/local/openssl35 --libdir=lib
+          make -j"$(nproc)"
+          sudo make install_sw
+          echo "built openssl: $(/usr/local/openssl35/bin/openssl version)"
 
       - name: Install
         run: uv sync --locked
