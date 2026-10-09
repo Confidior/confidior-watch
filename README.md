@@ -52,6 +52,20 @@ further on. Searching the log for `digest` itself returns nothing, which is not
 the same as the anchor being absent: fetch by `log_index` or `uuid`, both of which
 are recorded for exactly this reason.
 
+### Known artifacts in the log
+
+**2026-10-09 holds three observation sets, not one.** The workflow was dispatched
+manually three times on that date while the wire-check build was being fixed, so
+the day carries three records per vendor. `__heartbeat__` is written once per run
+and shows the same three. The three ppq `measurement` changes on that date are an
+artifact of those dispatches, not vendor events.
+
+That last point is not specific to the date: ppq's `measurement` is the SHA-256 of
+its whole attestation document, which embeds a per-request nonce and timestamp, so
+it changes on every request. A ppq `measurement` change in this log should be read
+as "a different instance answered" rather than "the code changed" until that field
+is defined more narrowly.
+
 ## Design rules
 
 These are load-bearing. Most are enforced by a test in `tests/`; the one that
